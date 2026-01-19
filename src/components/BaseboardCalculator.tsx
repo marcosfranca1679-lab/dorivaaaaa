@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import DownloadButton from "./DownloadButton";
+import DownloadImageButton from "./DownloadImageButton";
 
 type MaterialType = "mdf" | "madeira";
 
@@ -175,10 +175,44 @@ ${resultLength !== null ? `Comprimento Final: ${resultLength.toFixed(1)} cm` : "
               )}
             </div>
 
-            <DownloadButton
+            <DownloadImageButton
               filename={`rodape-${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}`}
-              content={downloadContent}
-            />
+              title="Cálculo de Rodapé"
+            >
+              <div className="space-y-3">
+                <div className="bg-white/10 rounded-lg p-3">
+                  <p className="text-white/60 text-xs">Material</p>
+                  <p className="text-white font-bold">{material === "mdf" ? "MDF" : "Madeira"}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-white/60 text-xs">Profundidade</p>
+                    <p className="text-white font-bold">{depth} cm</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-white/60 text-xs">Comprimento</p>
+                    <p className="text-white font-bold">{length} cm</p>
+                  </div>
+                </div>
+                <div className="border-t border-white/20 pt-3">
+                  <p className="text-amber-400 font-semibold mb-2">Resultados:</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {resultDepth !== null && (
+                      <div className="bg-amber-500/20 rounded-lg p-3">
+                        <p className="text-white/60 text-xs">Profundidade Final</p>
+                        <p className="text-amber-400 font-bold text-lg">{resultDepth.toFixed(1)} cm</p>
+                      </div>
+                    )}
+                    {resultLength !== null && (
+                      <div className="bg-emerald-500/20 rounded-lg p-3">
+                        <p className="text-white/60 text-xs">Comprimento Final</p>
+                        <p className="text-emerald-400 font-bold text-lg">{resultLength.toFixed(1)} cm</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </DownloadImageButton>
           </div>
         )}
       </div>

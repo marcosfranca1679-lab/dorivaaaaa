@@ -5,6 +5,7 @@ import ShoerackCalculator from "@/components/ShoerackCalculator";
 import RipadoCalculator from "@/components/RipadoCalculator";
 import BaseboardCalculator from "@/components/BaseboardCalculator";
 import ShelfCalculator from "@/components/ShelfCalculator";
+import NotesDialog from "@/components/NotesDialog";
 import logoDoriva from "@/assets/logo-doriva.png";
 
 type CalculatorType = "gaveta" | "sapateira" | "ripado" | "rodape" | "prateleira";
@@ -132,6 +133,9 @@ const Index = () => {
           <p className="text-sm text-muted-foreground mt-1">Calculadora desenvolvida por William</p>
         </footer>
       </div>
+      
+      {/* Notes Button */}
+      <NotesDialog />
     </div>
   );
 };
