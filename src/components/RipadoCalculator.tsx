@@ -171,6 +171,18 @@ LARGURA DE CADA VÃO: ${measurements.larguraVao.toFixed(2)} cm
             </div>
           ) : (
             <>
+              {/* Discount Info */}
+              <div className="p-4 bg-accent/10 rounded-2xl border border-accent/30 mb-4">
+                <h3 className="text-sm font-semibold text-accent mb-2">📋 Cálculo Aplicado</h3>
+                <ul className="text-xs text-muted-foreground space-y-1">
+                  <li>• <strong>Quantidade de vãos:</strong> {measurements.quantidadeVaos} (ripados - 1)</li>
+                  <li>• <strong>Espaço ripados:</strong> {emendaAtivada ? `(${quantidadeRipados} - 1) × ${larguraRipado} + (${larguraRipado} ÷ 2)` : `${quantidadeRipados} × ${larguraRipado}`} = {measurements.espacoRipados.toFixed(2)} cm</li>
+                  <li>• <strong>Espaço vãos:</strong> {tamanhoTotal} - {measurements.espacoRipados.toFixed(2)} = {measurements.espacoVaos.toFixed(2)} cm</li>
+                  <li>• <strong>Largura vão:</strong> {measurements.espacoVaos.toFixed(2)} ÷ {measurements.quantidadeVaos} = {measurements.larguraVao.toFixed(2)} cm</li>
+                  {emendaAtivada && <li>• <strong>Emenda:</strong> Última ripa com metade ({(parseFloat(larguraRipado) / 2).toFixed(1)} cm)</li>}
+                </ul>
+              </div>
+
               {/* Main Result */}
               <div className="p-6 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl border border-primary/30 mb-4">
                 <p className="text-sm text-muted-foreground mb-1">Largura de Cada Vão</p>
