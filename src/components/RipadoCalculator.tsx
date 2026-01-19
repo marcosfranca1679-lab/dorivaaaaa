@@ -200,35 +200,63 @@ LARGURA DE CADA VÃO: ${measurements.larguraVao.toFixed(2)} cm
                 <h3 className="text-sm font-medium text-muted-foreground mb-3">
                   Distribuição Visual
                 </h3>
-                <div className="flex items-end gap-0 h-16 bg-secondary/20 rounded-xl p-2 overflow-hidden">
-                  {Array.from({ length: parseInt(quantidadeRipados) || 0 }).map((_, index) => {
-                    const isLast = index === parseInt(quantidadeRipados) - 1;
-                    const ripaWidth = emendaAtivada && isLast ? parseFloat(larguraRipado) / 2 : parseFloat(larguraRipado);
-                    
-                    return (
-                      <div key={index} className="flex items-end h-full">
-                        {/* Ripado */}
-                        <div 
-                          className={`h-full bg-primary/60 rounded-sm flex items-center justify-center ${
-                            emendaAtivada && isLast ? 'border-r-2 border-dashed border-primary' : ''
-                          }`}
-                          style={{ width: `${ripaWidth * 3}px`, minWidth: '8px' }}
-                        >
-                          <span className="text-[8px] text-primary-foreground font-bold">R</span>
-                        </div>
-                        {/* Vão (não após o último) */}
-                        {index < parseInt(quantidadeRipados) - 1 && (
+                <div className="bg-secondary/20 rounded-xl p-3 overflow-x-auto">
+                  <div className="flex items-center h-12 min-w-fit">
+                    {Array.from({ length: parseInt(quantidadeRipados) || 0 }).map((_, index) => {
+                      const isLast = index === parseInt(quantidadeRipados) - 1;
+                      const quantidade = parseInt(quantidadeRipados);
+                      const largura = parseFloat(larguraRipado);
+                      const total = parseFloat(tamanhoTotal);
+                      
+                      // Calcular proporções para visualização
+                      const ripaWidthReal = emendaAtivada && isLast ? largura / 2 : largura;
+                      const ripaWidthPercent = (ripaWidthReal / total) * 100;
+                      const vaoWidthPercent = (measurements.larguraVao / total) * 100;
+                      
+                      return (
+                        <div key={index} className="flex items-center h-full shrink-0">
+                          {/* Ripado */}
                           <div 
-                            className="h-3/4 bg-accent/30 rounded-sm flex items-center justify-center"
-                            style={{ width: `${Math.max(measurements.larguraVao * 3, 8)}px`, minWidth: '8px' }}
+                            className={`h-full bg-primary/70 rounded flex items-center justify-center ${
+                              emendaAtivada && isLast ? 'border-r-2 border-dashed border-primary' : ''
+                            }`}
+                            style={{ 
+                              width: `${Math.max(ripaWidthPercent * 2, 20)}px`,
+                              minWidth: '20px'
+                            }}
                           >
-                            <span className="text-[8px] text-accent-foreground/60">V</span>
+                            <span className="text-[9px] text-primary-foreground font-bold">R{index + 1}</span>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                          {/* Vão (não após o último) */}
+                          {index < quantidade - 1 && (
+                            <div 
+                              className="h-3/4 bg-accent/40 rounded flex items-center justify-center border border-accent/60"
+                              style={{ 
+                                width: `${Math.max(vaoWidthPercent * 2, 16)}px`,
+                                minWidth: '16px'
+                              }}
+                            >
+                              <span className="text-[8px] text-foreground/70">V</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
+                
+                {/* Legend */}
+                <div className="flex justify-center gap-4 mt-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-primary/70 rounded"></div>
+                    <span>Ripado ({larguraRipado} cm)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-accent/40 rounded border border-accent/60"></div>
+                    <span>Vão ({measurements.larguraVao.toFixed(2)} cm)</span>
+                  </div>
+                </div>
+                
                 {emendaAtivada && (
                   <p className="text-xs text-muted-foreground mt-2 text-center">
                     * Última ripa com metade ({(parseFloat(larguraRipado) / 2).toFixed(1)} cm) para emenda
