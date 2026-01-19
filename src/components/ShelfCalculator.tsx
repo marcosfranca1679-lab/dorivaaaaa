@@ -49,8 +49,9 @@ const ShelfCalculator = () => {
     // Altura de cada vão
     const gapHeight = availableHeight / gapCount;
 
-    // Medida do pitão: se engrossada, adiciona a espessura extra
-    const pitonMeasure = isThickened ? gapHeight + thicknessCm : gapHeight;
+    // Medida do pitão: altura do vão + espessura efetiva da prateleira
+    // Para prateleira engrossada, soma a espessura dobrada
+    const pitonMeasure = gapHeight + effectiveThickness;
 
     return {
       finalDepth: finalDepth.toFixed(2),
@@ -224,7 +225,7 @@ ${showPiton ? `Medida do Pitão: ${results.pitonMeasure} cm` : ""}
                 <li>• <strong>Largura:</strong> -0,1 cm (1 mm de folga)</li>
                 <li>• <strong>Espessura efetiva:</strong> {results.effectiveThickness} cm {isThickened ? "(engrossada - dobrada)" : ""}</li>
                 <li>• <strong>Quantidade de vãos:</strong> {results.gapCount} (prateleiras + 1)</li>
-                {showPiton && isThickened && <li>• <strong>Pitão:</strong> Altura do vão + espessura MDF ({parseFloat(mdfThickness) / 10} cm)</li>}
+                {showPiton && <li>• <strong>Pitão:</strong> Altura do vão + espessura efetiva ({results.effectiveThickness} cm)</li>}
               </ul>
             </div>
 
