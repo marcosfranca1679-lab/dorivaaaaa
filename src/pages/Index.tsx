@@ -5,6 +5,7 @@ import ShoerackCalculator from "@/components/ShoerackCalculator";
 import RipadoCalculator from "@/components/RipadoCalculator";
 import BaseboardCalculator from "@/components/BaseboardCalculator";
 import ShelfCalculator from "@/components/ShelfCalculator";
+import logoDoriva from "@/assets/logo-doriva.png";
 
 type CalculatorType = "gaveta" | "sapateira" | "ripado" | "rodape" | "prateleira";
 
@@ -34,21 +35,25 @@ const Index = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 wood-pattern">
+      {/* Decorative top bar */}
+      <div className="h-1.5 bg-gradient-to-r from-primary via-accent to-primary" />
+      
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         {/* Header */}
         <header className="text-center mb-8 animate-fade-in">
-          <div className="mb-4">
-            <div className="w-64 md:w-80 mx-auto">
-              <h1 className="text-3xl md:text-4xl font-bold text-primary tracking-tight">
-                Doriva Móveis
-              </h1>
-              <p className="text-sm text-muted-foreground">Sob Medida</p>
-            </div>
+          <div className="mb-6">
+            <img 
+              src={logoDoriva} 
+              alt="Doriva Móveis Sob Medida" 
+              className="w-56 md:w-72 mx-auto drop-shadow-lg"
+            />
           </div>
-          <h2 className="text-xl md:text-2xl font-bold text-foreground mb-1 tracking-tight">
-            Calculadora Marcenaria
-          </h2>
+          <div className="inline-block px-6 py-2 bg-gradient-to-r from-primary/10 via-accent/10 to-primary/10 rounded-full border border-primary/20">
+            <h2 className="text-lg md:text-xl font-semibold text-foreground tracking-wide">
+              Calculadora de Marcenaria
+            </h2>
+          </div>
         </header>
 
         {/* Calculator Selector */}
