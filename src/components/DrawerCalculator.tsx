@@ -43,7 +43,8 @@ const DrawerCalculator = () => {
     const larguraFrenteTraseira = largura - desconto;
 
     // Altura disponível menos os vãos de 3cm
-    const totalVaos = (quantidadeGavetas + 1) * 3;
+    // Cada gaveta tem um vão abaixo dela (gaveta + vão, gaveta + vão, ...)
+    const totalVaos = quantidadeGavetas * 3;
     const alturaDisponivel = altura - totalVaos;
 
     // Altura de cada lateral (gaveta)
@@ -339,14 +340,9 @@ LATERAL (${measurements.side.quantity} peças):
           {/* Visual Distribution */}
           <div className="mt-6">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              Distribuição Visual
+              Distribuição Visual (Gaveta → Vão)
             </h3>
             <div className="space-y-1">
-              {/* Top gap */}
-              <div className="h-3 bg-border/50 rounded-full flex items-center justify-center">
-                <span className="text-[10px] text-muted-foreground">3 cm</span>
-              </div>
-              
               {Array.from({ length: quantidadeGavetas }).map((_, index) => (
                 <div key={index}>
                   {/* Drawer */}
@@ -358,13 +354,16 @@ LATERAL (${measurements.side.quantity} peças):
                       Gaveta {index + 1} - {measurements.alturaLateral.toFixed(1)} cm
                     </span>
                   </div>
-                  {/* Gap */}
+                  {/* Gap after each drawer */}
                   <div className="h-3 bg-border/50 rounded-full flex items-center justify-center mt-1">
-                    <span className="text-[10px] text-muted-foreground">3 cm</span>
+                    <span className="text-[10px] text-muted-foreground">Vão {index + 1} - 3 cm</span>
                   </div>
                 </div>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              {quantidadeGavetas} gaveta{quantidadeGavetas > 1 ? 's' : ''} + {quantidadeGavetas} vão{quantidadeGavetas > 1 ? 's' : ''} = {quantidadeGavetas * 3} cm de vãos
+            </p>
           </div>
 
           <DownloadButton
