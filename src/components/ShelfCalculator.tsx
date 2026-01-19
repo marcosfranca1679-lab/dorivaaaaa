@@ -49,9 +49,10 @@ const ShelfCalculator = () => {
     // Altura de cada vão
     const gapHeight = availableHeight / gapCount;
 
-    // Medida do pitão: altura do vão + espessura efetiva da prateleira
-    // Para prateleira engrossada, soma a espessura dobrada
-    const pitonMeasure = gapHeight + effectiveThickness;
+    // Medida do pitão: 
+    // - Sem engrossamento: igual à altura do vão
+    // - Com engrossamento: altura do vão + espessura simples (porque a prateleira dobrada ocupa mais)
+    const pitonMeasure = isThickened ? gapHeight + thicknessCm : gapHeight;
 
     return {
       finalDepth: finalDepth.toFixed(2),
