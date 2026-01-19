@@ -125,6 +125,12 @@ const Index = () => {
           {activeCalculator === "rodape" && <BaseboardCalculator />}
           {activeCalculator === "prateleira" && <ShelfCalculator />}
         </div>
+
+        {/* Footer */}
+        <footer className="mt-10 pt-6 border-t border-border/30 text-center">
+          <p className="text-lg font-semibold text-foreground">Doriva Móveis Sob Medida</p>
+          <p className="text-sm text-muted-foreground mt-1">Calculadora desenvolvida por William</p>
+        </footer>
       </div>
     </div>
   );
