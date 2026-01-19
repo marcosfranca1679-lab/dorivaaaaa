@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Ruler, Square, Layers, Package, Minus, Plus } from "lucide-react";
-import DownloadButton from "./DownloadButton";
+import DownloadImageButton from "./DownloadImageButton";
 
 type SlideType = "oculta" | "telescopica";
 
@@ -300,10 +300,40 @@ LATERAL (${measurements.side.quantity} peças):
             </div>
           </div>
 
-          <DownloadButton
+          <DownloadImageButton
             filename={`sapateiras-${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}`}
-            content={downloadContent}
-          />
+            title="Cálculo de Sapateiras"
+          >
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white/10 rounded-lg p-3">
+                  <p className="text-white/60 text-xs">Largura do Vão</p>
+                  <p className="text-white font-bold">{vaoLargura} cm</p>
+                </div>
+                <div className="bg-white/10 rounded-lg p-3">
+                  <p className="text-white/60 text-xs">Altura da Lateral</p>
+                  <p className="text-white font-bold">{alturaLateralFixa} cm</p>
+                </div>
+              </div>
+              <div className="bg-white/10 rounded-lg p-3">
+                <p className="text-white/60 text-xs">Configuração</p>
+                <p className="text-white text-sm">{quantidadeSapateiras} sapateira(s) • {slideType === "oculta" ? "Oculta" : "Telescópica"} {tamanhoCorre}cm</p>
+              </div>
+              <div className="border-t border-white/20 pt-3">
+                <p className="text-amber-400 font-semibold mb-2">Medidas de Corte:</p>
+                <div className="space-y-2">
+                  <div className="bg-amber-500/20 rounded-lg p-3">
+                    <p className="text-white/60 text-xs">Frente/Traseira ({measurements.frontBack.quantity} peças)</p>
+                    <p className="text-amber-400 font-bold text-lg">{measurements.frontBack.width.toFixed(1)} × {measurements.frontBack.height.toFixed(1)} cm</p>
+                  </div>
+                  <div className="bg-amber-500/20 rounded-lg p-3">
+                    <p className="text-white/60 text-xs">Lateral ({measurements.side.quantity} peças)</p>
+                    <p className="text-amber-400 font-bold text-lg">{measurements.side.width} × {measurements.side.height.toFixed(1)} cm</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </DownloadImageButton>
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Ruler, LayoutGrid, Link2 } from "lucide-react";
-import DownloadButton from "./DownloadButton";
+import DownloadImageButton from "./DownloadImageButton";
 
 interface RipadoMeasurements {
   espacoRipados: number;
@@ -276,10 +276,46 @@ LARGURA DE CADA VÃO: ${measurements.larguraVao.toFixed(2)} cm
                 )}
               </div>
 
-              <DownloadButton
+              <DownloadImageButton
                 filename={`ripados-${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}`}
-                content={downloadContent}
-              />
+                title="Cálculo de Ripados"
+              >
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white/10 rounded-lg p-3">
+                      <p className="text-white/60 text-xs">Tamanho Total</p>
+                      <p className="text-white font-bold">{tamanhoTotal} cm</p>
+                    </div>
+                    <div className="bg-white/10 rounded-lg p-3">
+                      <p className="text-white/60 text-xs">Ripados</p>
+                      <p className="text-white font-bold">{quantidadeRipados} un</p>
+                    </div>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-white/60 text-xs">Largura do Ripado</p>
+                    <p className="text-white font-bold">{larguraRipado} cm {emendaAtivada ? "(com emenda)" : ""}</p>
+                  </div>
+                  <div className="border-t border-white/20 pt-3">
+                    <p className="text-amber-400 font-semibold mb-2">Resultados:</p>
+                    <div className="space-y-2">
+                      <div className="bg-amber-500/20 rounded-lg p-3">
+                        <p className="text-white/60 text-xs">Largura de Cada Vão</p>
+                        <p className="text-amber-400 font-bold text-xl">{measurements.larguraVao.toFixed(2)} cm</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-white/10 rounded-lg p-2">
+                          <p className="text-white/60 text-xs">Espaço Ripados</p>
+                          <p className="text-white font-semibold">{measurements.espacoRipados.toFixed(2)} cm</p>
+                        </div>
+                        <div className="bg-white/10 rounded-lg p-2">
+                          <p className="text-white/60 text-xs">Espaço Vãos</p>
+                          <p className="text-white font-semibold">{measurements.espacoVaos.toFixed(2)} cm</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </DownloadImageButton>
             </>
           )}
         </div>

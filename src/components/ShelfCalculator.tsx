@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import DownloadButton from "./DownloadButton";
+import DownloadImageButton from "./DownloadImageButton";
 
 const ShelfCalculator = () => {
   const [depth, setDepth] = useState<string>("");
@@ -292,10 +292,52 @@ ${showPiton ? `Medida do Pitão: ${results.pitonMeasure} cm` : ""}
               </div>
             </div>
 
-            <DownloadButton
+            <DownloadImageButton
               filename={`prateleiras-${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}`}
-              content={downloadContent}
-            />
+              title="Cálculo de Prateleiras"
+            >
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-white/60 text-xs">Profundidade</p>
+                    <p className="text-white font-bold">{depth} cm</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-white/60 text-xs">Largura</p>
+                    <p className="text-white font-bold">{width} cm</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-white/60 text-xs">Altura do Vão</p>
+                    <p className="text-white font-bold">{openingHeight} cm</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-3">
+                    <p className="text-white/60 text-xs">Prateleiras</p>
+                    <p className="text-white font-bold">{shelfCount} un</p>
+                  </div>
+                </div>
+                <div className="border-t border-white/20 pt-3">
+                  <p className="text-amber-400 font-semibold mb-2">Resultados:</p>
+                  <div className="space-y-2">
+                    <div className="bg-amber-500/20 rounded-lg p-3">
+                      <p className="text-white/60 text-xs">Medidas Finais</p>
+                      <p className="text-amber-400 font-bold">{results.finalDepth} × {results.finalWidth} cm</p>
+                    </div>
+                    <div className="bg-amber-500/20 rounded-lg p-3">
+                      <p className="text-white/60 text-xs">Altura de Cada Vão</p>
+                      <p className="text-amber-400 font-bold text-lg">{results.gapHeight} cm</p>
+                    </div>
+                    {showPiton && (
+                      <div className="bg-emerald-500/20 rounded-lg p-3">
+                        <p className="text-white/60 text-xs">Medida do Pitão</p>
+                        <p className="text-emerald-400 font-bold">{results.pitonMeasure} cm</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </DownloadImageButton>
           </CardContent>
         </Card>
       )}
