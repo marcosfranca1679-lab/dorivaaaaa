@@ -1,0 +1,251 @@
+import { useState, useMemo } from "react";
+import { Ruler, LayoutGrid, Link2 } from "lucide-react";
+import DownloadButton from "./DownloadButton";
+
+interface RipadoMeasurements {
+  espacoRipados: number;
+  espacoVaos: number;
+  quantidadeVaos: number;
+  larguraVao: number;
+}
+
+const RipadoCalculator = () => {
+  const [quantidadeRipados, setQuantidadeRipados] = useState<string>("");
+  const [larguraRipado, setLarguraRipado] = useState<string>("");
+  const [tamanhoTotal, setTamanhoTotal] = useState<string>("");
+  const [emendaAtivada, setEmendaAtivada] = useState<boolean>(false);
+
+  const measurements = useMemo<RipadoMeasurements | null>(() => {
+    const quantidade = parseInt(quantidadeRipados);
+    const largura = parseFloat(larguraRipado);
+    const total = parseFloat(tamanhoTotal);
+
+    if (isNaN(quantidade) || isNaN(largura) || isNaN(total) || quantidade < 2) {
+      return null;
+    }
+
+    // Com emenda: última ripa fica metade para fora
+    // Espaço ocupado pelos ripados (última ripa conta só metade se emenda ativada)
+    const espacoRipados = emendaAtivada
+      ? (quantidade - 1) * largura + (largura / 2)
+      : quantidade * largura;
+
+    // Quantidade de vãos = ripados - 1
+    const quantidadeVaos = quantidade - 1;
+
+    // Espaço restante para os vãos
+    const espacoVaos = total - espacoRipados;
+
+    // Largura de cada vão
+    const larguraVao = espacoVaos / quantidadeVaos;
+
+    return {
+      espacoRipados,
+      espacoVaos,
+      quantidadeVaos,
+      larguraVao,
+    };
+  }, [quantidadeRipados, larguraRipado, tamanhoTotal, emendaAtivada]);
+
+  const hasResults = measurements !== null;
+  const hasError = measurements && measurements.larguraVao < 0;
+
+  const downloadContent = useMemo(() => {
+    if (!measurements) return "";
+    
+    const date = new Date().toLocaleDateString("pt-BR");
+    return `CALCULADORA DE RIPADOS - Doriva Móveis
+Data: ${date}
+
+=== DADOS DE ENTRADA ===
+Tamanho Total: ${tamanhoTotal} cm
+Quantidade de Ripados: ${quantidadeRipados}
+Largura de Cada Ripado: ${larguraRipado} cm
+Emenda Ativada: ${emendaAtivada ? "Sim" : "Não"}
+
+=== RESULTADOS ===
+Espaço ocupado pelos ripados: ${measurements.espacoRipados.toFixed(2)} cm
+Espaço para os vãos: ${measurements.espacoVaos.toFixed(2)} cm
+Quantidade de vãos: ${measurements.quantidadeVaos}
+LARGURA DE CADA VÃO: ${measurements.larguraVao.toFixed(2)} cm
+`;
+  }, [measurements, tamanhoTotal, quantidadeRipados, larguraRipado, emendaAtivada]);
+
+  return (
+    <div className="space-y-6">
+      {/* Input Form */}
+      <div className="bg-card/80 backdrop-blur-sm rounded-3xl p-6 shadow-2xl border border-border/50 animate-scale-in">
+        <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+          <LayoutGrid className="w-5 h-5 text-primary" />
+          Dados do Ripado
+        </h2>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">
+              Tamanho Total da Peça (cm)
+            </label>
+            <input
+              type="number"
+              value={tamanhoTotal}
+              onChange={(e) => setTamanhoTotal(e.target.value)}
+              placeholder="Ex: 155"
+              className="input-wood w-full"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Quantidade de Ripados
+              </label>
+              <input
+                type="number"
+                value={quantidadeRipados}
+                onChange={(e) => setQuantidadeRipados(e.target.value)}
+                placeholder="Ex: 4"
+                min="2"
+                className="input-wood w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
+                Largura de Cada Ripado (cm)
+              </label>
+              <input
+                type="number"
+                value={larguraRipado}
+                onChange={(e) => setLarguraRipado(e.target.value)}
+                placeholder="Ex: 3"
+                step="0.1"
+                className="input-wood w-full"
+              />
+            </div>
+          </div>
+
+          {/* Toggle Emenda */}
+          <div
+            className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${
+              emendaAtivada
+                ? 'bg-primary/10 border-primary/50'
+                : 'bg-secondary/30 border-border/30 hover:bg-secondary/50'
+            }`}
+            onClick={() => setEmendaAtivada(!emendaAtivada)}
+          >
+            <div className="flex items-center gap-3">
+              <Link2 className={`w-5 h-5 ${emendaAtivada ? 'text-primary' : 'text-muted-foreground'}`} />
+              <div>
+                <p className={`font-medium ${emendaAtivada ? 'text-primary' : 'text-foreground'}`}>
+                  Emenda de Ripado
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Última ripa com metade para continuação
+                </p>
+              </div>
+            </div>
+            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+              emendaAtivada ? 'border-primary bg-primary' : 'border-muted-foreground'
+            }`}>
+              {emendaAtivada && <div className="w-3 h-3 rounded-full bg-primary-foreground" />}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Results */}
+      {hasResults && (
+        <div className="bg-card/80 backdrop-blur-sm rounded-3xl p-6 shadow-2xl border border-border/50 animate-scale-in">
+          <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+            <Ruler className="w-5 h-5 text-primary" />
+            Resultado
+          </h2>
+
+          {hasError ? (
+            <div className="p-4 bg-destructive/10 rounded-2xl border border-destructive/30">
+              <p className="text-destructive font-medium">
+                Erro: Os ripados ocupam mais espaço que o disponível!
+              </p>
+              <p className="text-sm text-destructive/80 mt-1">
+                Reduza a quantidade ou largura dos ripados.
+              </p>
+            </div>
+          ) : (
+            <>
+              {/* Main Result */}
+              <div className="p-6 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl border border-primary/30 mb-4">
+                <p className="text-sm text-muted-foreground mb-1">Largura de Cada Vão</p>
+                <p className="text-4xl font-bold text-primary">
+                  {measurements.larguraVao.toFixed(2)} <span className="text-lg">cm</span>
+                </p>
+              </div>
+
+              {/* Details */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="p-3 bg-secondary/30 rounded-xl">
+                  <p className="text-xs text-muted-foreground">Espaço Ripados</p>
+                  <p className="font-semibold text-foreground">
+                    {measurements.espacoRipados.toFixed(2)} cm
+                  </p>
+                </div>
+                <div className="p-3 bg-secondary/30 rounded-xl">
+                  <p className="text-xs text-muted-foreground">Espaço Vãos</p>
+                  <p className="font-semibold text-foreground">
+                    {measurements.espacoVaos.toFixed(2)} cm
+                  </p>
+                </div>
+              </div>
+
+              {/* Visual Distribution */}
+              <div className="mt-4">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                  Distribuição Visual
+                </h3>
+                <div className="flex items-end gap-0 h-16 bg-secondary/20 rounded-xl p-2 overflow-hidden">
+                  {Array.from({ length: parseInt(quantidadeRipados) || 0 }).map((_, index) => {
+                    const isLast = index === parseInt(quantidadeRipados) - 1;
+                    const ripaWidth = emendaAtivada && isLast ? parseFloat(larguraRipado) / 2 : parseFloat(larguraRipado);
+                    
+                    return (
+                      <div key={index} className="flex items-end h-full">
+                        {/* Ripado */}
+                        <div 
+                          className={`h-full bg-primary/60 rounded-sm flex items-center justify-center ${
+                            emendaAtivada && isLast ? 'border-r-2 border-dashed border-primary' : ''
+                          }`}
+                          style={{ width: `${ripaWidth * 3}px`, minWidth: '8px' }}
+                        >
+                          <span className="text-[8px] text-primary-foreground font-bold">R</span>
+                        </div>
+                        {/* Vão (não após o último) */}
+                        {index < parseInt(quantidadeRipados) - 1 && (
+                          <div 
+                            className="h-3/4 bg-accent/30 rounded-sm flex items-center justify-center"
+                            style={{ width: `${Math.max(measurements.larguraVao * 3, 8)}px`, minWidth: '8px' }}
+                          >
+                            <span className="text-[8px] text-accent-foreground/60">V</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {emendaAtivada && (
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    * Última ripa com metade ({(parseFloat(larguraRipado) / 2).toFixed(1)} cm) para emenda
+                  </p>
+                )}
+              </div>
+
+              <DownloadButton
+                filename={`ripados-${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}`}
+                content={downloadContent}
+              />
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default RipadoCalculator;
