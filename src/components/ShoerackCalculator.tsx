@@ -230,6 +230,15 @@ LATERAL (${measurements.side.quantity} peças):
             Medidas de Corte
           </h2>
 
+          {/* Discount Info */}
+          <div className="p-4 bg-accent/10 rounded-2xl border border-accent/30 mb-4">
+            <h3 className="text-sm font-semibold text-accent mb-2">📋 Descontos Aplicados</h3>
+            <ul className="text-xs text-muted-foreground space-y-1">
+              <li>• <strong>Largura Frente/Traseira:</strong> {slideType === "oculta" ? "-4 cm (oculta)" : "-5,7 cm (telescópica)"}</li>
+              <li>• <strong>Altura Frente/Traseira:</strong> -2 cm da altura da lateral</li>
+            </ul>
+          </div>
+
           <div className="space-y-4">
             {/* Front/Back */}
             <div className="p-4 bg-secondary/30 rounded-2xl">

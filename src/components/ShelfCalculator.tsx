@@ -216,6 +216,18 @@ ${showPiton ? `Medida do Pitão: ${results.pitonMeasure} cm` : ""}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Discount Info */}
+            <div className="p-4 bg-accent/10 rounded-2xl border border-accent/30">
+              <h3 className="text-sm font-semibold text-accent mb-2">📋 Descontos Aplicados</h3>
+              <ul className="text-xs text-muted-foreground space-y-1">
+                <li>• <strong>Profundidade:</strong> -0,5 cm (5 mm de folga)</li>
+                <li>• <strong>Largura:</strong> -0,1 cm (1 mm de folga)</li>
+                <li>• <strong>Espessura efetiva:</strong> {results.effectiveThickness} cm {isThickened ? "(engrossada - dobrada)" : ""}</li>
+                <li>• <strong>Quantidade de vãos:</strong> {results.gapCount} (prateleiras + 1)</li>
+                {showPiton && isThickened && <li>• <strong>Pitão:</strong> Altura do vão + espessura MDF ({parseFloat(mdfThickness) / 10} cm)</li>}
+              </ul>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-secondary/30 rounded-2xl">
                 <p className="text-xs text-muted-foreground mb-1">Profundidade Final</p>
