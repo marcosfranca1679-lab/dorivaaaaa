@@ -1,14 +1,15 @@
 import { useCallback, useState } from "react";
-import { Calculator, Footprints, LayoutGrid, RectangleHorizontal, Layers } from "lucide-react";
+import { Calculator, Footprints, LayoutGrid, RectangleHorizontal, Layers, DoorOpen } from "lucide-react";
 import DrawerCalculator from "@/components/DrawerCalculator";
 import ShoerackCalculator from "@/components/ShoerackCalculator";
 import RipadoCalculator from "@/components/RipadoCalculator";
 import BaseboardCalculator from "@/components/BaseboardCalculator";
 import ShelfCalculator from "@/components/ShelfCalculator";
+import CoverCalculator from "@/components/CoverCalculator";
 import NotesDialog from "@/components/NotesDialog";
 import logoDoriva from "@/assets/logo-doriva.png";
 
-type CalculatorType = "gaveta" | "sapateira" | "ripado" | "rodape" | "prateleira";
+type CalculatorType = "gaveta" | "sapateira" | "ripado" | "rodape" | "prateleira" | "vaos";
 
 const Index = () => {
   const [activeCalculator, setActiveCalculator] = useState<CalculatorType>("gaveta");
@@ -59,7 +60,7 @@ const Index = () => {
 
         {/* Calculator Selector */}
         <div className="bg-card/80 backdrop-blur-sm rounded-3xl p-2 shadow-2xl border border-border/50 mb-6 animate-scale-in">
-          <div className="grid grid-cols-5 gap-1 md:gap-2">
+          <div className="grid grid-cols-3 gap-1 md:gap-2 mb-1 md:mb-2">
             <button
               onClick={() => switchCalculator("gaveta")}
               className={`p-2 md:p-4 rounded-2xl transition-all duration-300 font-semibold flex flex-col items-center justify-center gap-1 ${
@@ -93,6 +94,8 @@ const Index = () => {
               <LayoutGrid className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-[10px] md:text-sm">Ripados</span>
             </button>
+          </div>
+          <div className="grid grid-cols-3 gap-1 md:gap-2">
             <button
               onClick={() => switchCalculator("rodape")}
               className={`p-2 md:p-4 rounded-2xl transition-all duration-300 font-semibold flex flex-col items-center justify-center gap-1 ${
@@ -115,6 +118,17 @@ const Index = () => {
               <Layers className="w-4 h-4 md:w-5 md:h-5" />
               <span className="text-[10px] md:text-sm">Prateleiras</span>
             </button>
+            <button
+              onClick={() => switchCalculator("vaos")}
+              className={`p-2 md:p-4 rounded-2xl transition-all duration-300 font-semibold flex flex-col items-center justify-center gap-1 ${
+                activeCalculator === "vaos"
+                  ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg scale-[1.02]"
+                  : "bg-background/50 text-muted-foreground hover:bg-secondary/50 hover:scale-[1.01]"
+              }`}
+            >
+              <DoorOpen className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-[10px] md:text-sm">Vãos</span>
+            </button>
           </div>
         </div>
 
@@ -125,6 +139,7 @@ const Index = () => {
           {activeCalculator === "ripado" && <RipadoCalculator />}
           {activeCalculator === "rodape" && <BaseboardCalculator />}
           {activeCalculator === "prateleira" && <ShelfCalculator />}
+          {activeCalculator === "vaos" && <CoverCalculator />}
         </div>
 
         {/* Footer */}
