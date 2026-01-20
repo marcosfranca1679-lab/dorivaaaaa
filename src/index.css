@@ -1,4 +1,10 @@
 @tailwind base;
+
+/* Utility for vertical text */
+.writing-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
 @tailwind components;
 @tailwind utilities;
 

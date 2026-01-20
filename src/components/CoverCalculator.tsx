@@ -41,7 +41,11 @@ const CoverCalculator = () => {
       return {
         width: coverWidth,
         height: coverHeight,
-        type: "Tampa de Gaveta"
+        type: "Tampa de Gaveta",
+        sideGap: 0.2, // folga lateral (cada lado)
+        topGap: 0.2,
+        bottomGap: 0.2,
+        betweenGap: 0.4
       };
     } else {
       // Porta logic
@@ -65,12 +69,172 @@ const CoverCalculator = () => {
         width: coverWidth,
         height: coverHeight,
         type: "Porta",
-        bottomExtra: hasPassingHandle ? bottomExtra : undefined
+        bottomExtra: hasPassingHandle ? bottomExtra : undefined,
+        sideGap: 0.2,
+        topGap: 0.2,
+        bottomGap: 0.2,
+        betweenGap: 0.4
       };
     }
   };
 
   const result = calculateDimensions();
+
+  // Visual distribution component for Tampas (vertical stacking)
+  const renderTampaVisualization = () => {
+    if (!result) return null;
+    
+    const items = [];
+    
+    // Top gap
+    items.push(
+      <div key="top-gap" className="flex items-center justify-center">
+        <div className="h-3 w-full bg-amber-200/50 border border-dashed border-amber-400 rounded flex items-center justify-center">
+          <span className="text-[10px] text-amber-700 font-medium">0,2 cm</span>
+        </div>
+      </div>
+    );
+    
+    for (let i = 0; i < quantityValue; i++) {
+      // Tampa
+      items.push(
+        <div key={`tampa-${i}`} className="flex items-center gap-2">
+          <div className="w-2 bg-amber-200/50 border border-dashed border-amber-400 rounded flex items-center justify-center self-stretch">
+            <span className="text-[8px] text-amber-700 font-medium writing-vertical">0,2</span>
+          </div>
+          <div className="flex-1 bg-gradient-to-r from-primary/20 to-primary/30 border-2 border-primary/50 rounded-lg p-3 text-center">
+            <div className="font-bold text-foreground text-sm">Tampa {i + 1}</div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {result.width.toFixed(2)} x {result.height.toFixed(2)} cm
+            </div>
+          </div>
+          <div className="w-2 bg-amber-200/50 border border-dashed border-amber-400 rounded flex items-center justify-center self-stretch">
+            <span className="text-[8px] text-amber-700 font-medium writing-vertical">0,2</span>
+          </div>
+        </div>
+      );
+      
+      // Gap between tampas (except after last one)
+      if (i < quantityValue - 1) {
+        items.push(
+          <div key={`gap-${i}`} className="flex items-center justify-center">
+            <div className="h-4 w-full bg-amber-300/50 border border-dashed border-amber-500 rounded flex items-center justify-center">
+              <span className="text-[10px] text-amber-800 font-medium">0,4 cm</span>
+            </div>
+          </div>
+        );
+      }
+    }
+    
+    // Bottom gap
+    items.push(
+      <div key="bottom-gap" className="flex items-center justify-center">
+        <div className="h-3 w-full bg-amber-200/50 border border-dashed border-amber-400 rounded flex items-center justify-center">
+          <span className="text-[10px] text-amber-700 font-medium">0,2 cm</span>
+        </div>
+      </div>
+    );
+    
+    return (
+      <div className="bg-secondary/20 rounded-xl p-4 border border-border/30">
+        <h4 className="text-sm font-semibold text-foreground mb-3 text-center">Distribuição Visual</h4>
+        <div className="bg-card/50 rounded-lg p-3 border-2 border-border/50">
+          <div className="text-xs text-center text-muted-foreground mb-2">
+            Vão: {heightValue} x {widthValue} cm
+          </div>
+          <div className="space-y-1">
+            {items}
+          </div>
+        </div>
+        <div className="flex items-center gap-4 justify-center mt-3 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-primary/30 border border-primary/50 rounded"></div>
+            <span className="text-muted-foreground">Tampa</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-amber-200/50 border border-amber-400 rounded"></div>
+            <span className="text-muted-foreground">Folga</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Visual distribution component for Portas (horizontal layout)
+  const renderPortaVisualization = () => {
+    if (!result) return null;
+    
+    return (
+      <div className="bg-secondary/20 rounded-xl p-4 border border-border/30">
+        <h4 className="text-sm font-semibold text-foreground mb-3 text-center">Distribuição Visual</h4>
+        <div className="bg-card/50 rounded-lg p-3 border-2 border-border/50">
+          <div className="text-xs text-center text-muted-foreground mb-2">
+            Vão: {heightValue} x {widthValue} cm
+          </div>
+          
+          {/* Top gap for height */}
+          <div className="flex items-center justify-center mb-1">
+            <div className="h-3 w-full bg-amber-200/50 border border-dashed border-amber-400 rounded flex items-center justify-center">
+              <span className="text-[10px] text-amber-700 font-medium">0,2 cm (altura)</span>
+            </div>
+          </div>
+          
+          {/* Horizontal doors layout */}
+          <div className="flex items-stretch gap-1 min-h-[100px]">
+            {/* Left gap */}
+            <div className="w-4 bg-amber-200/50 border border-dashed border-amber-400 rounded flex items-center justify-center">
+              <span className="text-[8px] text-amber-700 font-medium writing-vertical">0,2</span>
+            </div>
+            
+            {Array.from({ length: quantityValue }).map((_, i) => (
+              <div key={i} className="contents">
+                {/* Porta */}
+                <div className="flex-1 bg-gradient-to-b from-primary/20 to-primary/30 border-2 border-primary/50 rounded-lg p-2 flex flex-col items-center justify-center min-w-[60px]">
+                  <div className="font-bold text-foreground text-xs">Porta {i + 1}</div>
+                  <div className="text-[10px] text-muted-foreground mt-1 text-center">
+                    {result.width.toFixed(2)} x {result.height.toFixed(2)} cm
+                  </div>
+                  {hasPassingHandle && (
+                    <div className="text-[9px] text-accent mt-1">+1cm ↓</div>
+                  )}
+                </div>
+                
+                {/* Gap between doors */}
+                {i < quantityValue - 1 && (
+                  <div className="w-5 bg-amber-300/50 border border-dashed border-amber-500 rounded flex items-center justify-center">
+                    <span className="text-[8px] text-amber-800 font-medium writing-vertical">0,4</span>
+                  </div>
+                )}
+              </div>
+            ))}
+            
+            {/* Right gap */}
+            <div className="w-4 bg-amber-200/50 border border-dashed border-amber-400 rounded flex items-center justify-center">
+              <span className="text-[8px] text-amber-700 font-medium writing-vertical">0,2</span>
+            </div>
+          </div>
+          
+          {/* Bottom gap for height */}
+          <div className="flex items-center justify-center mt-1">
+            <div className="h-3 w-full bg-amber-200/50 border border-dashed border-amber-400 rounded flex items-center justify-center">
+              <span className="text-[10px] text-amber-700 font-medium">0,2 cm (altura)</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-4 justify-center mt-3 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-primary/30 border border-primary/50 rounded"></div>
+            <span className="text-muted-foreground">Porta</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 bg-amber-200/50 border border-amber-400 rounded"></div>
+            <span className="text-muted-foreground">Folga</span>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const getResultContent = () => {
     if (!result) return null;
@@ -102,6 +266,76 @@ const CoverCalculator = () => {
         )}
       </div>
     );
+  };
+
+  // Visual content for download
+  const getVisualDownloadContent = () => {
+    if (!result) return null;
+
+    if (coverType === "tampa") {
+      const items = [];
+      items.push(
+        <div key="top-gap" className="h-3 w-full bg-amber-200 border border-amber-400 rounded flex items-center justify-center">
+          <span className="text-[9px] text-amber-800">0,2 cm</span>
+        </div>
+      );
+      
+      for (let i = 0; i < quantityValue; i++) {
+        items.push(
+          <div key={`tampa-${i}`} className="flex items-center gap-1">
+            <div className="w-2 bg-amber-200 border border-amber-400 rounded self-stretch"></div>
+            <div className="flex-1 bg-primary/20 border-2 border-primary/50 rounded p-2 text-center">
+              <div className="font-bold text-xs">Tampa {i + 1}</div>
+              <div className="text-[10px] text-muted-foreground">{result.width.toFixed(2)} x {result.height.toFixed(2)} cm</div>
+            </div>
+            <div className="w-2 bg-amber-200 border border-amber-400 rounded self-stretch"></div>
+          </div>
+        );
+        
+        if (i < quantityValue - 1) {
+          items.push(
+            <div key={`gap-${i}`} className="h-4 w-full bg-amber-300 border border-amber-500 rounded flex items-center justify-center">
+              <span className="text-[9px] text-amber-800">0,4 cm</span>
+            </div>
+          );
+        }
+      }
+      
+      items.push(
+        <div key="bottom-gap" className="h-3 w-full bg-amber-200 border border-amber-400 rounded flex items-center justify-center">
+          <span className="text-[9px] text-amber-800">0,2 cm</span>
+        </div>
+      );
+      
+      return (
+        <div className="space-y-1 p-2 bg-card rounded-lg border">
+          <div className="text-xs text-center mb-2">Vão: {heightValue} x {widthValue} cm</div>
+          {items}
+        </div>
+      );
+    } else {
+      return (
+        <div className="p-2 bg-card rounded-lg border">
+          <div className="text-xs text-center mb-2">Vão: {heightValue} x {widthValue} cm</div>
+          <div className="flex items-stretch gap-1 min-h-[80px]">
+            <div className="w-3 bg-amber-200 border border-amber-400 rounded"></div>
+            {Array.from({ length: quantityValue }).map((_, i) => (
+              <div key={i} className="contents">
+                <div className="flex-1 bg-primary/20 border-2 border-primary/50 rounded p-1 flex flex-col items-center justify-center min-w-[50px]">
+                  <div className="font-bold text-[10px]">Porta {i + 1}</div>
+                  <div className="text-[8px] text-muted-foreground">{result.width.toFixed(2)} x {result.height.toFixed(2)}</div>
+                  {hasPassingHandle && <div className="text-[8px] text-accent">+1cm ↓</div>}
+                </div>
+                {i < quantityValue - 1 && (
+                  <div className="w-4 bg-amber-300 border border-amber-500 rounded"></div>
+                )}
+              </div>
+            ))}
+            <div className="w-3 bg-amber-200 border border-amber-400 rounded"></div>
+          </div>
+        </div>
+      );
+    }
   };
 
   return (
@@ -207,6 +441,9 @@ const CoverCalculator = () => {
           <>
             <Separator className="bg-border/50" />
             
+            {/* Visual Distribution */}
+            {coverType === "tampa" ? renderTampaVisualization() : renderPortaVisualization()}
+            
             <div ref={resultRef} className="space-y-4">
               <h3 className="text-lg font-bold text-foreground text-center">
                 Medidas para Corte
@@ -227,7 +464,10 @@ const CoverCalculator = () => {
                   </p>
                 </div>
                 
-                <div className="space-y-2">
+                {/* Visual in download */}
+                {getVisualDownloadContent()}
+                
+                <div className="space-y-2 mt-4">
                   <div className="flex justify-between items-center p-3 bg-secondary/30 rounded-lg">
                     <span className="text-muted-foreground">Quantidade:</span>
                     <span className="font-bold">{quantityValue}</span>
