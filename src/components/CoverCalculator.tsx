@@ -59,17 +59,16 @@ const CoverCalculator = () => {
       const coverWidth = remainingWidth / quantityValue;
 
       // Puxador passante: desconta 0,2 na altura e adiciona 1 cm embaixo
-      let bottomExtra = 0;
+      // A altura final da porta = altura - 0,2 + 1 = altura + 0,8
       if (hasPassingHandle) {
-        coverHeight = coverHeight - 0.2;
-        bottomExtra = 1;
+        coverHeight = coverHeight - 0.2 + 1;
       }
 
       return {
         width: coverWidth,
         height: coverHeight,
         type: "Porta",
-        bottomExtra: hasPassingHandle ? bottomExtra : undefined,
+        hasPassingHandle,
         sideGap: 0.2,
         topGap: 0.2,
         bottomGap: 0.2,
@@ -258,10 +257,10 @@ const CoverCalculator = () => {
           <span className="text-foreground font-medium">Altura:</span>
           <span className="font-bold text-primary text-lg">{result.height.toFixed(2)} cm</span>
         </div>
-        {result.bottomExtra !== undefined && (
+        {result.hasPassingHandle && (
           <div className="flex justify-between items-center p-3 bg-accent/20 rounded-xl border border-accent/30">
-            <span className="text-foreground font-medium">Acréscimo inferior (puxador):</span>
-            <span className="font-bold text-accent text-lg">+{result.bottomExtra.toFixed(1)} cm</span>
+            <span className="text-foreground font-medium">Com puxador passante:</span>
+            <span className="font-bold text-accent text-lg">Sim (-0,2 +1cm)</span>
           </div>
         )}
       </div>
@@ -480,15 +479,10 @@ const CoverCalculator = () => {
                     <span className="font-medium">Altura:</span>
                     <span className="font-bold text-primary text-lg">{result.height.toFixed(2)} cm</span>
                   </div>
-                  {result.bottomExtra !== undefined && (
-                    <div className="flex justify-between items-center p-3 bg-accent/20 rounded-lg border border-accent/30">
-                      <span className="font-medium">Acréscimo inferior:</span>
-                      <span className="font-bold text-accent">+{result.bottomExtra.toFixed(1)} cm</span>
-                    </div>
-                  )}
                   {hasPassingHandle && coverType === "porta" && (
-                    <div className="text-center text-sm text-muted-foreground mt-2">
-                      ✓ Com puxador passante
+                    <div className="flex justify-between items-center p-3 bg-accent/20 rounded-lg border border-accent/30">
+                      <span className="font-medium">Puxador passante:</span>
+                      <span className="font-bold text-accent">Sim (-0,2 +1cm)</span>
                     </div>
                   )}
                 </div>
