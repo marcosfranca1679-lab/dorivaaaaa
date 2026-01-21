@@ -49,19 +49,21 @@ const CoverCalculator = () => {
       };
     } else {
       // Porta logic
-      // Altura: desconta 0,4 cm da altura total
-      let coverHeight = heightValue - 0.4;
+      // Altura: desconta 0,4 cm da altura total (exceto com puxador passante)
+      let coverHeight: number;
+      if (hasPassingHandle) {
+        // Puxador passante: não desconta nada, apenas adiciona 1 cm
+        coverHeight = heightValue + 1;
+      } else {
+        // Sem puxador: desconta 0,4 cm
+        coverHeight = heightValue - 0.4;
+      }
 
       // Largura: 0,2 início + 0,4 para cada encontro + 0,2 final
       const encounters = quantityValue - 1;
       const totalWidthDiscount = 0.2 + (encounters * 0.4) + 0.2;
       const remainingWidth = widthValue - totalWidthDiscount;
       const coverWidth = remainingWidth / quantityValue;
-
-      // Puxador passante: apenas adiciona 1 cm na altura
-      if (hasPassingHandle) {
-        coverHeight = coverHeight + 1;
-      }
 
       return {
         width: coverWidth,
