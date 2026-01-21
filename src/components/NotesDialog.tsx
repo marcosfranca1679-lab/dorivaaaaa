@@ -1,31 +1,90 @@
 import { useState, useRef } from "react";
-import { StickyNote, ImageDown } from "lucide-react";
+import { FileText, Ruler, ImageDown, Plus, Trash2, Phone, Mail, User } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import logoDoriva from "@/assets/logo-doriva.png";
 
+interface BudgetItem {
+  id: string;
+  description: string;
+  value: string;
+}
+
+interface MeasurementItem {
+  id: string;
+  name: string;
+  value: string;
+}
+
 const NotesDialog = () => {
-  const [notes, setNotes] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
-  const captureRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState("budget");
+  
+  // Budget state
+  const [budgetClient, setBudgetClient] = useState({ name: "", phone: "", email: "" });
+  const [budgetItems, setBudgetItems] = useState<BudgetItem[]>([
+    { id: "1", description: "", value: "" }
+  ]);
+  
+  // Measurements state
+  const [measureClient, setMeasureClient] = useState({ name: "", phone: "", email: "" });
+  const [measureItems, setMeasureItems] = useState<MeasurementItem[]>([
+    { id: "1", name: "", value: "" }
+  ]);
 
-  const handleDownload = async () => {
-    if (!notes.trim()) {
-      toast.error("Escreva uma anotação primeiro!");
+  const budgetCaptureRef = useRef<HTMLDivElement>(null);
+  const measureCaptureRef = useRef<HTMLDivElement>(null);
+
+  const addBudgetItem = () => {
+    setBudgetItems([...budgetItems, { id: Date.now().toString(), description: "", value: "" }]);
+  };
+
+  const removeBudgetItem = (id: string) => {
+    if (budgetItems.length > 1) {
+      setBudgetItems(budgetItems.filter(item => item.id !== id));
+    }
+  };
+
+  const updateBudgetItem = (id: string, field: "description" | "value", value: string) => {
+    setBudgetItems(budgetItems.map(item => 
+      item.id === id ? { ...item, [field]: value } : item
+    ));
+  };
+
+  const addMeasureItem = () => {
+    setMeasureItems([...measureItems, { id: Date.now().toString(), name: "", value: "" }]);
+  };
+
+  const removeMeasureItem = (id: string) => {
+    if (measureItems.length > 1) {
+      setMeasureItems(measureItems.filter(item => item.id !== id));
+    }
+  };
+
+  const updateMeasureItem = (id: string, field: "name" | "value", value: string) => {
+    setMeasureItems(measureItems.map(item => 
+      item.id === id ? { ...item, [field]: value } : item
+    ));
+  };
+
+  const handleDownloadBudget = async () => {
+    if (!budgetClient.name.trim()) {
+      toast.error("Preencha o nome do cliente!");
       return;
     }
 
-    if (!captureRef.current) return;
-
+    if (!budgetCaptureRef.current) return;
     setIsCapturing(true);
 
     try {
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const canvas = await html2canvas(captureRef.current, {
+      const canvas = await html2canvas(budgetCaptureRef.current, {
         backgroundColor: "#1a1a2e",
         scale: 2,
         logging: false,
@@ -33,11 +92,11 @@ const NotesDialog = () => {
       });
       
       const link = document.createElement("a");
-      link.download = `anotacao-doriva-${new Date().toISOString().split('T')[0]}.png`;
+      link.download = `orcamento-${budgetClient.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.png`;
       link.href = canvas.toDataURL("image/png");
       link.click();
       
-      toast.success("Anotação salva como imagem!");
+      toast.success("Orçamento salvo como imagem!");
     } catch (error) {
       console.error("Erro ao gerar imagem:", error);
       toast.error("Erro ao gerar imagem");
@@ -46,42 +105,207 @@ const NotesDialog = () => {
     }
   };
 
+  const handleDownloadMeasures = async () => {
+    if (!measureClient.name.trim()) {
+      toast.error("Preencha o nome do cliente!");
+      return;
+    }
+
+    if (!measureCaptureRef.current) return;
+    setIsCapturing(true);
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const canvas = await html2canvas(measureCaptureRef.current, {
+        backgroundColor: "#1a1a2e",
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      });
+      
+      const link = document.createElement("a");
+      link.download = `medidas-${measureClient.name.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.png`;
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      
+      toast.success("Lista de medidas salva como imagem!");
+    } catch (error) {
+      console.error("Erro ao gerar imagem:", error);
+      toast.error("Erro ao gerar imagem");
+    } finally {
+      setIsCapturing(false);
+    }
+  };
+
+  const calculateTotal = () => {
+    return budgetItems.reduce((total, item) => {
+      const value = parseFloat(item.value.replace(/[^\d,.-]/g, '').replace(',', '.')) || 0;
+      return total + value;
+    }, 0);
+  };
+
   return (
     <>
+      {/* Hidden Budget Capture Element */}
       <div
-        ref={captureRef}
-        className={isCapturing ? "block fixed left-[-9999px] top-0" : "hidden"}
-        style={{ width: "600px" }}
+        ref={budgetCaptureRef}
+        className={isCapturing && activeTab === "budget" ? "block fixed left-[-9999px] top-0" : "hidden"}
+        style={{ width: "700px" }}
       >
-        <div className="bg-gradient-to-br from-[#1a1a2e] to-[#2d2d44] p-6 rounded-2xl">
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+        <div className="bg-gradient-to-br from-[#1a1a2e] via-[#252542] to-[#2d2d44] p-8 rounded-3xl shadow-2xl">
+          {/* Header with Logo */}
+          <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-amber-500/30">
             <img 
               src={logoDoriva} 
               alt="Doriva Móveis" 
-              className="h-12"
+              className="h-16"
             />
             <div className="text-right">
-              <p className="text-white/60 text-sm">Anotações</p>
-              <p className="text-white/40 text-xs">{new Date().toLocaleDateString('pt-BR')}</p>
+              <h1 className="text-2xl font-bold text-amber-400">ORÇAMENTO</h1>
+              <p className="text-white/60 text-sm mt-1">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+            </div>
+          </div>
+
+          {/* Client Info */}
+          <div className="bg-white/5 rounded-2xl p-6 mb-6 border border-white/10">
+            <h3 className="text-amber-400 font-semibold mb-4 text-lg flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Dados do Cliente
+            </h3>
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex items-center gap-3">
+                <User className="w-4 h-4 text-amber-400/70" />
+                <span className="text-white">{budgetClient.name || "—"}</span>
+              </div>
+              {budgetClient.phone && (
+                <div className="flex items-center gap-3">
+                  <Phone className="w-4 h-4 text-amber-400/70" />
+                  <span className="text-white">{budgetClient.phone}</span>
+                </div>
+              )}
+              {budgetClient.email && (
+                <div className="flex items-center gap-3">
+                  <Mail className="w-4 h-4 text-amber-400/70" />
+                  <span className="text-white">{budgetClient.email}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Budget Items */}
+          <div className="bg-white/5 rounded-2xl p-6 mb-6 border border-white/10">
+            <h3 className="text-amber-400 font-semibold mb-4 text-lg flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Itens do Orçamento
+            </h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-[1fr_120px] gap-3 pb-2 border-b border-white/10">
+                <span className="text-white/60 text-sm font-medium">Descrição</span>
+                <span className="text-white/60 text-sm font-medium text-right">Valor</span>
+              </div>
+              {budgetItems.filter(item => item.description || item.value).map((item, index) => (
+                <div key={item.id} className="grid grid-cols-[1fr_120px] gap-3 py-2 border-b border-white/5">
+                  <span className="text-white">{item.description || `Item ${index + 1}`}</span>
+                  <span className="text-emerald-400 font-semibold text-right">
+                    {item.value ? `R$ ${item.value}` : "—"}
+                  </span>
+                </div>
+              ))}
+              <div className="grid grid-cols-[1fr_120px] gap-3 pt-4 border-t-2 border-amber-500/30">
+                <span className="text-white font-bold text-lg">TOTAL</span>
+                <span className="text-amber-400 font-bold text-lg text-right">
+                  R$ {calculateTotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
             </div>
           </div>
           
-          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <StickyNote className="w-6 h-6 text-amber-400" />
-            Minhas Anotações
-          </h2>
-          
-          <div className="bg-white/5 rounded-xl p-4 min-h-[200px]">
-            <p className="text-white whitespace-pre-wrap">{notes}</p>
-          </div>
-          
-          <div className="mt-6 pt-4 border-t border-white/10 text-center">
-            <p className="text-white/60 text-sm">Doriva Móveis Sob Medida</p>
-            <p className="text-white/40 text-xs">Calculadora desenvolvida por William</p>
+          {/* Footer */}
+          <div className="pt-6 border-t border-white/10 text-center">
+            <p className="text-amber-400 font-semibold text-lg">Doriva Móveis Sob Medida</p>
+            <p className="text-white/50 text-sm mt-2">Qualidade e precisão em cada detalhe</p>
           </div>
         </div>
       </div>
 
+      {/* Hidden Measurements Capture Element */}
+      <div
+        ref={measureCaptureRef}
+        className={isCapturing && activeTab === "measures" ? "block fixed left-[-9999px] top-0" : "hidden"}
+        style={{ width: "700px" }}
+      >
+        <div className="bg-gradient-to-br from-[#1a1a2e] via-[#252542] to-[#2d2d44] p-8 rounded-3xl shadow-2xl">
+          {/* Header with Logo */}
+          <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-amber-500/30">
+            <img 
+              src={logoDoriva} 
+              alt="Doriva Móveis" 
+              className="h-16"
+            />
+            <div className="text-right">
+              <h1 className="text-2xl font-bold text-amber-400">LISTA DE MEDIDAS</h1>
+              <p className="text-white/60 text-sm mt-1">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+            </div>
+          </div>
+
+          {/* Client Info */}
+          <div className="bg-white/5 rounded-2xl p-6 mb-6 border border-white/10">
+            <h3 className="text-amber-400 font-semibold mb-4 text-lg flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Dados do Cliente
+            </h3>
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex items-center gap-3">
+                <User className="w-4 h-4 text-amber-400/70" />
+                <span className="text-white">{measureClient.name || "—"}</span>
+              </div>
+              {measureClient.phone && (
+                <div className="flex items-center gap-3">
+                  <Phone className="w-4 h-4 text-amber-400/70" />
+                  <span className="text-white">{measureClient.phone}</span>
+                </div>
+              )}
+              {measureClient.email && (
+                <div className="flex items-center gap-3">
+                  <Mail className="w-4 h-4 text-amber-400/70" />
+                  <span className="text-white">{measureClient.email}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Measurement Items */}
+          <div className="bg-white/5 rounded-2xl p-6 mb-6 border border-white/10">
+            <h3 className="text-amber-400 font-semibold mb-4 text-lg flex items-center gap-2">
+              <Ruler className="w-5 h-5" />
+              Medidas
+            </h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-[1fr_150px] gap-3 pb-2 border-b border-white/10">
+                <span className="text-white/60 text-sm font-medium">Nome</span>
+                <span className="text-white/60 text-sm font-medium text-right">Medida</span>
+              </div>
+              {measureItems.filter(item => item.name || item.value).map((item, index) => (
+                <div key={item.id} className="grid grid-cols-[1fr_150px] gap-3 py-2 border-b border-white/5">
+                  <span className="text-white">{item.name || `Medida ${index + 1}`}</span>
+                  <span className="text-emerald-400 font-semibold text-right font-mono">
+                    {item.value || "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Footer */}
+          <div className="pt-6 border-t border-white/10 text-center">
+            <p className="text-amber-400 font-semibold text-lg">Doriva Móveis Sob Medida</p>
+            <p className="text-white/50 text-sm mt-2">Qualidade e precisão em cada detalhe</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Dialog Trigger Button */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <button
@@ -92,39 +316,238 @@ const NotesDialog = () => {
               hover:scale-110 transition-all duration-300
               animate-pulse hover:animate-none"
           >
-            <StickyNote className="w-6 h-6" />
+            <FileText className="w-6 h-6" />
           </button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md bg-card border-border">
+        <DialogContent className="sm:max-w-lg bg-card border-border max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-foreground">
-              <StickyNote className="w-5 h-5 text-amber-500" />
-              Anotações
+            <DialogTitle className="text-foreground text-xl">
+              Documentos
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
-            <Textarea
-              placeholder="Escreva suas anotações aqui..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="min-h-[200px] resize-none bg-background border-border text-foreground"
-            />
-            
-            <button
-              onClick={handleDownload}
-              disabled={isCapturing || !notes.trim()}
-              className="group flex items-center justify-center gap-2 w-full py-3 px-4
-                bg-gradient-to-r from-amber-500 to-orange-500
-                hover:from-amber-600 hover:to-orange-600
-                text-white font-semibold rounded-xl shadow-lg
-                hover:shadow-xl transition-all duration-300
-                disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ImageDown className="w-5 h-5" />
-              <span>{isCapturing ? "Gerando..." : "Baixar como Imagem"}</span>
-            </button>
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="budget" className="flex items-center gap-2">
+                <FileText className="w-4 h-4" />
+                Orçamento
+              </TabsTrigger>
+              <TabsTrigger value="measures" className="flex items-center gap-2">
+                <Ruler className="w-4 h-4" />
+                Medidas
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Budget Tab */}
+            <TabsContent value="budget" className="space-y-4">
+              {/* Client Info */}
+              <div className="space-y-3 p-4 bg-secondary/30 rounded-xl">
+                <h4 className="font-semibold text-foreground flex items-center gap-2">
+                  <User className="w-4 h-4 text-amber-500" />
+                  Dados do Cliente
+                </h4>
+                <div className="space-y-2">
+                  <div>
+                    <Label htmlFor="budget-name" className="text-xs text-muted-foreground">Nome *</Label>
+                    <Input
+                      id="budget-name"
+                      placeholder="Nome do cliente"
+                      value={budgetClient.name}
+                      onChange={(e) => setBudgetClient({ ...budgetClient, name: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="budget-phone" className="text-xs text-muted-foreground">Telefone</Label>
+                      <Input
+                        id="budget-phone"
+                        placeholder="(00) 00000-0000"
+                        value={budgetClient.phone}
+                        onChange={(e) => setBudgetClient({ ...budgetClient, phone: e.target.value })}
+                        className="bg-background"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="budget-email" className="text-xs text-muted-foreground">E-mail</Label>
+                      <Input
+                        id="budget-email"
+                        type="email"
+                        placeholder="email@exemplo.com"
+                        value={budgetClient.email}
+                        onChange={(e) => setBudgetClient({ ...budgetClient, email: e.target.value })}
+                        className="bg-background"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Budget Items */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-foreground flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-amber-500" />
+                  Itens do Orçamento
+                </h4>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                  {budgetItems.map((item, index) => (
+                    <div key={item.id} className="flex gap-2 items-center">
+                      <Input
+                        placeholder={`Descrição ${index + 1}`}
+                        value={item.description}
+                        onChange={(e) => updateBudgetItem(item.id, "description", e.target.value)}
+                        className="flex-1 bg-background"
+                      />
+                      <Input
+                        placeholder="R$ 0,00"
+                        value={item.value}
+                        onChange={(e) => updateBudgetItem(item.id, "value", e.target.value)}
+                        className="w-28 bg-background"
+                      />
+                      <button
+                        onClick={() => removeBudgetItem(item.id)}
+                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                        disabled={budgetItems.length === 1}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={addBudgetItem}
+                  className="flex items-center gap-2 text-sm text-amber-500 hover:text-amber-400 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar item
+                </button>
+              </div>
+
+              {/* Total */}
+              <div className="flex justify-between items-center p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                <span className="font-semibold text-foreground">Total:</span>
+                <span className="text-lg font-bold text-amber-500">
+                  R$ {calculateTotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+
+              {/* Download Button */}
+              <button
+                onClick={handleDownloadBudget}
+                disabled={isCapturing || !budgetClient.name.trim()}
+                className="group flex items-center justify-center gap-2 w-full py-3 px-4
+                  bg-gradient-to-r from-amber-500 to-orange-500
+                  hover:from-amber-600 hover:to-orange-600
+                  text-white font-semibold rounded-xl shadow-lg
+                  hover:shadow-xl transition-all duration-300
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ImageDown className="w-5 h-5" />
+                <span>{isCapturing ? "Gerando..." : "Baixar Orçamento"}</span>
+              </button>
+            </TabsContent>
+
+            {/* Measurements Tab */}
+            <TabsContent value="measures" className="space-y-4">
+              {/* Client Info */}
+              <div className="space-y-3 p-4 bg-secondary/30 rounded-xl">
+                <h4 className="font-semibold text-foreground flex items-center gap-2">
+                  <User className="w-4 h-4 text-amber-500" />
+                  Dados do Cliente
+                </h4>
+                <div className="space-y-2">
+                  <div>
+                    <Label htmlFor="measure-name" className="text-xs text-muted-foreground">Nome *</Label>
+                    <Input
+                      id="measure-name"
+                      placeholder="Nome do cliente"
+                      value={measureClient.name}
+                      onChange={(e) => setMeasureClient({ ...measureClient, name: e.target.value })}
+                      className="bg-background"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label htmlFor="measure-phone" className="text-xs text-muted-foreground">Telefone</Label>
+                      <Input
+                        id="measure-phone"
+                        placeholder="(00) 00000-0000"
+                        value={measureClient.phone}
+                        onChange={(e) => setMeasureClient({ ...measureClient, phone: e.target.value })}
+                        className="bg-background"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="measure-email" className="text-xs text-muted-foreground">E-mail</Label>
+                      <Input
+                        id="measure-email"
+                        type="email"
+                        placeholder="email@exemplo.com"
+                        value={measureClient.email}
+                        onChange={(e) => setMeasureClient({ ...measureClient, email: e.target.value })}
+                        className="bg-background"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Measurement Items */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-foreground flex items-center gap-2">
+                  <Ruler className="w-4 h-4 text-amber-500" />
+                  Lista de Medidas
+                </h4>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                  {measureItems.map((item, index) => (
+                    <div key={item.id} className="flex gap-2 items-center">
+                      <Input
+                        placeholder={`Nome da medida ${index + 1}`}
+                        value={item.name}
+                        onChange={(e) => updateMeasureItem(item.id, "name", e.target.value)}
+                        className="flex-1 bg-background"
+                      />
+                      <Input
+                        placeholder="Ex: 120 x 60 cm"
+                        value={item.value}
+                        onChange={(e) => updateMeasureItem(item.id, "value", e.target.value)}
+                        className="w-36 bg-background"
+                      />
+                      <button
+                        onClick={() => removeMeasureItem(item.id)}
+                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                        disabled={measureItems.length === 1}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={addMeasureItem}
+                  className="flex items-center gap-2 text-sm text-amber-500 hover:text-amber-400 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Adicionar medida
+                </button>
+              </div>
+
+              {/* Download Button */}
+              <button
+                onClick={handleDownloadMeasures}
+                disabled={isCapturing || !measureClient.name.trim()}
+                className="group flex items-center justify-center gap-2 w-full py-3 px-4
+                  bg-gradient-to-r from-amber-500 to-orange-500
+                  hover:from-amber-600 hover:to-orange-600
+                  text-white font-semibold rounded-xl shadow-lg
+                  hover:shadow-xl transition-all duration-300
+                  disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ImageDown className="w-5 h-5" />
+                <span>{isCapturing ? "Gerando..." : "Baixar Lista de Medidas"}</span>
+              </button>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </>
