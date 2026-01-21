@@ -58,10 +58,9 @@ const CoverCalculator = () => {
       const remainingWidth = widthValue - totalWidthDiscount;
       const coverWidth = remainingWidth / quantityValue;
 
-      // Puxador passante: desconta 0,2 na altura e adiciona 1 cm embaixo
-      // A altura final da porta = altura - 0,2 + 1 = altura + 0,8
+      // Puxador passante: apenas adiciona 1 cm na altura
       if (hasPassingHandle) {
-        coverHeight = coverHeight - 0.2 + 1;
+        coverHeight = coverHeight + 1;
       }
 
       return {
@@ -260,7 +259,7 @@ const CoverCalculator = () => {
         {result.hasPassingHandle && (
           <div className="flex justify-between items-center p-3 bg-accent/20 rounded-xl border border-accent/30">
             <span className="text-foreground font-medium">Com puxador passante:</span>
-            <span className="font-bold text-accent text-lg">Sim (-0,2 +1cm)</span>
+            <span className="font-bold text-accent text-lg">Sim (+1cm)</span>
           </div>
         )}
       </div>
@@ -482,7 +481,7 @@ const CoverCalculator = () => {
                   {hasPassingHandle && coverType === "porta" && (
                     <div className="flex justify-between items-center p-3 bg-accent/20 rounded-lg border border-accent/30">
                       <span className="font-medium">Puxador passante:</span>
-                      <span className="font-bold text-accent">Sim (-0,2 +1cm)</span>
+                      <span className="font-bold text-accent">Sim (+1cm)</span>
                     </div>
                   )}
                 </div>

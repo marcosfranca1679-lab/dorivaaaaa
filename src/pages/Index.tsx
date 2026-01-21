@@ -8,6 +8,7 @@ import ShelfCalculator from "@/components/ShelfCalculator";
 import CoverCalculator from "@/components/CoverCalculator";
 import NotesDialog from "@/components/NotesDialog";
 import logoDoriva from "@/assets/logo-doriva.png";
+import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
 
 type CalculatorType = "gaveta" | "sapateira" | "ripado" | "rodape" | "prateleira" | "vaos";
 
@@ -38,8 +39,15 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 wood-pattern">
-      {/* Decorative top bar */}
-      <div className="h-1.5 bg-gradient-to-r from-primary via-accent to-primary" />
+      {/* Banner Image with gradient fade */}
+      <div className="relative w-full h-32 md:h-48 overflow-hidden">
+        <img 
+          src={bannerMarceneiro} 
+          alt="Banner Marcenaria" 
+          className="w-full h-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
+      </div>
       
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         {/* Header */}
