@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import logoDoriva from "@/assets/logo-doriva.png";
-
+import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
 interface BudgetItem {
   id: string;
   description: string;
@@ -153,78 +153,88 @@ const NotesDialog = () => {
         className={isCapturing && activeTab === "budget" ? "block fixed left-[-9999px] top-0" : "hidden"}
         style={{ width: "700px" }}
       >
-        <div className="bg-gradient-to-br from-[#1a1a2e] via-[#252542] to-[#2d2d44] p-8 rounded-3xl shadow-2xl">
-          {/* Header with Logo */}
-          <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-amber-500/30">
+        <div className="bg-gradient-to-br from-[#1a1a2e] via-[#252542] to-[#2d2d44] rounded-3xl overflow-hidden shadow-2xl">
+          {/* Banner Image with Logo Overlay */}
+          <div className="relative h-32">
             <img 
-              src={logoDoriva} 
-              alt="Doriva Móveis" 
-              className="h-16"
+              src={bannerMarceneiro} 
+              alt="Banner Marcenaria" 
+              className="w-full h-full object-cover"
             />
-            <div className="text-right">
-              <h1 className="text-2xl font-bold text-amber-400">ORÇAMENTO</h1>
-              <p className="text-white/60 text-sm mt-1">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-[#1a1a2e]" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
+              <img 
+                src={logoDoriva} 
+                alt="Doriva Móveis" 
+                className="h-14 drop-shadow-lg"
+              />
+              <div className="text-right">
+                <h1 className="text-xl font-bold text-amber-400 drop-shadow">ORÇAMENTO</h1>
+                <p className="text-white/70 text-xs drop-shadow">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+              </div>
             </div>
           </div>
 
-          {/* Client Info */}
-          <div className="bg-white/5 rounded-2xl p-6 mb-6 border border-white/10">
-            <h3 className="text-amber-400 font-semibold mb-4 text-lg flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Dados do Cliente
-            </h3>
-            <div className="grid grid-cols-1 gap-3">
-              <div className="flex items-center gap-3">
-                <User className="w-4 h-4 text-amber-400/70" />
-                <span className="text-white">{budgetClient.name || "—"}</span>
+          <div className="p-6">
+            {/* Client Info */}
+            <div className="bg-white/5 rounded-2xl p-5 mb-5 border border-white/10">
+              <h3 className="text-amber-400 font-semibold mb-3 text-lg flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Dados do Cliente
+              </h3>
+              <div className="grid grid-cols-1 gap-2">
+                <div className="flex items-center gap-3">
+                  <User className="w-4 h-4 text-amber-400/70" />
+                  <span className="text-white">{budgetClient.name || "—"}</span>
+                </div>
+                {budgetClient.phone && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-4 h-4 text-amber-400/70" />
+                    <span className="text-white">{budgetClient.phone}</span>
+                  </div>
+                )}
+                {budgetClient.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-amber-400/70" />
+                    <span className="text-white">{budgetClient.email}</span>
+                  </div>
+                )}
               </div>
-              {budgetClient.phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="w-4 h-4 text-amber-400/70" />
-                  <span className="text-white">{budgetClient.phone}</span>
-                </div>
-              )}
-              {budgetClient.email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-amber-400/70" />
-                  <span className="text-white">{budgetClient.email}</span>
-                </div>
-              )}
             </div>
-          </div>
 
-          {/* Budget Items */}
-          <div className="bg-white/5 rounded-2xl p-6 mb-6 border border-white/10">
-            <h3 className="text-amber-400 font-semibold mb-4 text-lg flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Itens do Orçamento
-            </h3>
-            <div className="space-y-3">
-              <div className="grid grid-cols-[1fr_120px] gap-3 pb-2 border-b border-white/10">
-                <span className="text-white/60 text-sm font-medium">Descrição</span>
-                <span className="text-white/60 text-sm font-medium text-right">Valor</span>
-              </div>
-              {budgetItems.filter(item => item.description || item.value).map((item, index) => (
-                <div key={item.id} className="grid grid-cols-[1fr_120px] gap-3 py-2 border-b border-white/5">
-                  <span className="text-white">{item.description || `Item ${index + 1}`}</span>
-                  <span className="text-emerald-400 font-semibold text-right">
-                    {item.value ? `R$ ${item.value}` : "—"}
+            {/* Budget Items */}
+            <div className="bg-white/5 rounded-2xl p-5 mb-5 border border-white/10">
+              <h3 className="text-amber-400 font-semibold mb-3 text-lg flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Itens do Orçamento
+              </h3>
+              <div className="space-y-2">
+                <div className="grid grid-cols-[1fr_120px] gap-3 pb-2 border-b border-white/10">
+                  <span className="text-white/60 text-sm font-medium">Descrição</span>
+                  <span className="text-white/60 text-sm font-medium text-right">Valor</span>
+                </div>
+                {budgetItems.filter(item => item.description || item.value).map((item, index) => (
+                  <div key={item.id} className="grid grid-cols-[1fr_120px] gap-3 py-2 border-b border-white/5">
+                    <span className="text-white">{item.description || `Item ${index + 1}`}</span>
+                    <span className="text-emerald-400 font-semibold text-right">
+                      {item.value ? `R$ ${item.value}` : "—"}
+                    </span>
+                  </div>
+                ))}
+                <div className="grid grid-cols-[1fr_120px] gap-3 pt-3 border-t-2 border-amber-500/30">
+                  <span className="text-white font-bold text-lg">TOTAL</span>
+                  <span className="text-amber-400 font-bold text-lg text-right">
+                    R$ {calculateTotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
-              ))}
-              <div className="grid grid-cols-[1fr_120px] gap-3 pt-4 border-t-2 border-amber-500/30">
-                <span className="text-white font-bold text-lg">TOTAL</span>
-                <span className="text-amber-400 font-bold text-lg text-right">
-                  R$ {calculateTotal().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
               </div>
             </div>
-          </div>
-          
-          {/* Footer */}
-          <div className="pt-6 border-t border-white/10 text-center">
-            <p className="text-amber-400 font-semibold text-lg">Doriva Móveis Sob Medida</p>
-            <p className="text-white/50 text-sm mt-2">Qualidade e precisão em cada detalhe</p>
+            
+            {/* Footer */}
+            <div className="pt-4 border-t border-amber-500/30 text-center">
+              <p className="text-amber-400 font-semibold">Doriva Móveis Sob Medida</p>
+              <p className="text-white/50 text-xs mt-1">Qualidade e precisão em cada detalhe</p>
+            </div>
           </div>
         </div>
       </div>
@@ -235,72 +245,82 @@ const NotesDialog = () => {
         className={isCapturing && activeTab === "measures" ? "block fixed left-[-9999px] top-0" : "hidden"}
         style={{ width: "700px" }}
       >
-        <div className="bg-gradient-to-br from-[#1a1a2e] via-[#252542] to-[#2d2d44] p-8 rounded-3xl shadow-2xl">
-          {/* Header with Logo */}
-          <div className="flex items-center justify-between mb-8 pb-6 border-b-2 border-amber-500/30">
+        <div className="bg-gradient-to-br from-[#1a1a2e] via-[#252542] to-[#2d2d44] rounded-3xl overflow-hidden shadow-2xl">
+          {/* Banner Image with Logo Overlay */}
+          <div className="relative h-32">
             <img 
-              src={logoDoriva} 
-              alt="Doriva Móveis" 
-              className="h-16"
+              src={bannerMarceneiro} 
+              alt="Banner Marcenaria" 
+              className="w-full h-full object-cover"
             />
-            <div className="text-right">
-              <h1 className="text-2xl font-bold text-amber-400">LISTA DE MEDIDAS</h1>
-              <p className="text-white/60 text-sm mt-1">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-[#1a1a2e]" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
+              <img 
+                src={logoDoriva} 
+                alt="Doriva Móveis" 
+                className="h-14 drop-shadow-lg"
+              />
+              <div className="text-right">
+                <h1 className="text-xl font-bold text-amber-400 drop-shadow">LISTA DE MEDIDAS</h1>
+                <p className="text-white/70 text-xs drop-shadow">{new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+              </div>
             </div>
           </div>
 
-          {/* Client Info */}
-          <div className="bg-white/5 rounded-2xl p-6 mb-6 border border-white/10">
-            <h3 className="text-amber-400 font-semibold mb-4 text-lg flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Dados do Cliente
-            </h3>
-            <div className="grid grid-cols-1 gap-3">
-              <div className="flex items-center gap-3">
-                <User className="w-4 h-4 text-amber-400/70" />
-                <span className="text-white">{measureClient.name || "—"}</span>
+          <div className="p-6">
+            {/* Client Info */}
+            <div className="bg-white/5 rounded-2xl p-5 mb-5 border border-white/10">
+              <h3 className="text-amber-400 font-semibold mb-3 text-lg flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Dados do Cliente
+              </h3>
+              <div className="grid grid-cols-1 gap-2">
+                <div className="flex items-center gap-3">
+                  <User className="w-4 h-4 text-amber-400/70" />
+                  <span className="text-white">{measureClient.name || "—"}</span>
+                </div>
+                {measureClient.phone && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-4 h-4 text-amber-400/70" />
+                    <span className="text-white">{measureClient.phone}</span>
+                  </div>
+                )}
+                {measureClient.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-amber-400/70" />
+                    <span className="text-white">{measureClient.email}</span>
+                  </div>
+                )}
               </div>
-              {measureClient.phone && (
-                <div className="flex items-center gap-3">
-                  <Phone className="w-4 h-4 text-amber-400/70" />
-                  <span className="text-white">{measureClient.phone}</span>
-                </div>
-              )}
-              {measureClient.email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-amber-400/70" />
-                  <span className="text-white">{measureClient.email}</span>
-                </div>
-              )}
             </div>
-          </div>
 
-          {/* Measurement Items */}
-          <div className="bg-white/5 rounded-2xl p-6 mb-6 border border-white/10">
-            <h3 className="text-amber-400 font-semibold mb-4 text-lg flex items-center gap-2">
-              <Ruler className="w-5 h-5" />
-              Medidas
-            </h3>
-            <div className="space-y-3">
-              <div className="grid grid-cols-[1fr_150px] gap-3 pb-2 border-b border-white/10">
-                <span className="text-white/60 text-sm font-medium">Nome</span>
-                <span className="text-white/60 text-sm font-medium text-right">Medida</span>
-              </div>
-              {measureItems.filter(item => item.name || item.value).map((item, index) => (
-                <div key={item.id} className="grid grid-cols-[1fr_150px] gap-3 py-2 border-b border-white/5">
-                  <span className="text-white">{item.name || `Medida ${index + 1}`}</span>
-                  <span className="text-emerald-400 font-semibold text-right font-mono">
-                    {item.value || "—"}
-                  </span>
+            {/* Measurement Items */}
+            <div className="bg-white/5 rounded-2xl p-5 mb-5 border border-white/10">
+              <h3 className="text-amber-400 font-semibold mb-3 text-lg flex items-center gap-2">
+                <Ruler className="w-5 h-5" />
+                Medidas
+              </h3>
+              <div className="space-y-2">
+                <div className="grid grid-cols-[1fr_150px] gap-3 pb-2 border-b border-white/10">
+                  <span className="text-white/60 text-sm font-medium">Nome</span>
+                  <span className="text-white/60 text-sm font-medium text-right">Medida</span>
                 </div>
-              ))}
+                {measureItems.filter(item => item.name || item.value).map((item, index) => (
+                  <div key={item.id} className="grid grid-cols-[1fr_150px] gap-3 py-2 border-b border-white/5">
+                    <span className="text-white">{item.name || `Medida ${index + 1}`}</span>
+                    <span className="text-emerald-400 font-semibold text-right font-mono">
+                      {item.value || "—"}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-          
-          {/* Footer */}
-          <div className="pt-6 border-t border-white/10 text-center">
-            <p className="text-amber-400 font-semibold text-lg">Doriva Móveis Sob Medida</p>
-            <p className="text-white/50 text-sm mt-2">Qualidade e precisão em cada detalhe</p>
+            
+            {/* Footer */}
+            <div className="pt-4 border-t border-amber-500/30 text-center">
+              <p className="text-amber-400 font-semibold">Doriva Móveis Sob Medida</p>
+              <p className="text-white/50 text-xs mt-1">Qualidade e precisão em cada detalhe</p>
+            </div>
           </div>
         </div>
       </div>
