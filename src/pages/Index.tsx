@@ -7,6 +7,7 @@ import BaseboardCalculator from "@/components/BaseboardCalculator";
 import ShelfCalculator from "@/components/ShelfCalculator";
 import CoverCalculator from "@/components/CoverCalculator";
 import NotesDialog from "@/components/NotesDialog";
+import InstallAppButton from "@/components/InstallAppButton";
 import logoDoriva from "@/assets/logo-doriva.png";
 import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
 
@@ -52,6 +53,9 @@ const Index = () => {
       <div className="container mx-auto px-4 py-6 max-w-2xl">
         {/* Header */}
         <header className="text-center mb-8 animate-fade-in">
+          <div className="flex justify-end mb-2">
+            <InstallAppButton />
+          </div>
           <div className="mb-6">
             <img 
               src={logoDoriva} 
