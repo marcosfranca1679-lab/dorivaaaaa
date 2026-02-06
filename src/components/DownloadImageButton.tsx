@@ -11,24 +11,43 @@ interface DownloadImageButtonProps {
   title?: string;
 }
 
+// Check if URL is external
+const isExternalUrl = (url: string): boolean => {
+  if (url.startsWith("data:") || url.startsWith("blob:")) return false;
+  try {
+    return new URL(url, window.location.origin).origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+};
+
 // Convert image URL to base64 for offline support
 const imageToBase64 = (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    
+    // Only set crossOrigin for external URLs
+    if (isExternalUrl(url)) {
+      img.crossOrigin = 'anonymous';
+    }
+    
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
-      } else {
-        reject(new Error('Failed to get canvas context'));
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg', 0.9));
+        } else {
+          reject(new Error('Failed to get canvas context'));
+        }
+      } catch (err) {
+        reject(err);
       }
     };
-    img.onerror = reject;
+    img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
     img.src = url;
   });
 };
@@ -38,12 +57,42 @@ const DownloadImageButton = ({ filename, children, title }: DownloadImageButtonP
   const [isCapturing, setIsCapturing] = useState(false);
   const [logoBase64, setLogoBase64] = useState<string>("");
   const [bannerBase64, setBannerBase64] = useState<string>("");
+  const [imagesReady, setImagesReady] = useState(false);
 
   // Pre-convert images to base64 on mount for offline support
   useEffect(() => {
-    imageToBase64(logoDoriva).then(setLogoBase64).catch(console.error);
-    imageToBase64(bannerMarceneiro).then(setBannerBase64).catch(console.error);
+    const loadImages = async () => {
+      try {
+        const [logo, banner] = await Promise.all([
+          imageToBase64(logoDoriva),
+          imageToBase64(bannerMarceneiro)
+        ]);
+        setLogoBase64(logo);
+        setBannerBase64(banner);
+        setImagesReady(true);
+      } catch (err) {
+        console.error("Error loading images:", err);
+        // Even if conversion fails, mark as ready to use original URLs
+        setImagesReady(true);
+      }
+    };
+    loadImages();
   }, []);
+
+  // Wait for all images in the capture element to load
+  const waitForImages = async (element: HTMLElement): Promise<void> => {
+    const images = element.querySelectorAll('img');
+    const promises = Array.from(images).map((img) => {
+      if (img.complete && img.naturalHeight !== 0) {
+        return Promise.resolve();
+      }
+      return new Promise<void>((resolve) => {
+        img.onload = () => resolve();
+        img.onerror = () => resolve(); // Continue even if image fails
+      });
+    });
+    await Promise.all(promises);
+  };
 
   const handleDownload = async () => {
     if (!contentRef.current) return;
@@ -51,14 +100,22 @@ const DownloadImageButton = ({ filename, children, title }: DownloadImageButtonP
     setIsCapturing(true);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 150));
+      // Wait for state update and DOM render
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Wait for all images to load
+      await waitForImages(contentRef.current);
+      
+      // Additional delay for rendering
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const canvas = await html2canvas(contentRef.current, {
         backgroundColor: "#1a1a2e",
         scale: 2,
         logging: false,
-        useCORS: true,
+        useCORS: false,
         allowTaint: true,
+        imageTimeout: 0,
       });
       
       const link = document.createElement("a");
