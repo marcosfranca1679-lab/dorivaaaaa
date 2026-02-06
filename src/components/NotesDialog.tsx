@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FileText, Ruler, ImageDown, Plus, Trash2, Phone, Mail, User } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,29 @@ import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import logoDoriva from "@/assets/logo-doriva.png";
 import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
+
+// Convert image URL to base64 for offline support
+const imageToBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } else {
+        reject(new Error('Failed to get canvas context'));
+      }
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
 interface BudgetItem {
   id: string;
   description: string;
@@ -24,6 +47,14 @@ const NotesDialog = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [activeTab, setActiveTab] = useState("budget");
+  const [logoBase64, setLogoBase64] = useState<string>("");
+  const [bannerBase64, setBannerBase64] = useState<string>("");
+  
+  // Pre-convert images to base64 on mount for offline support
+  useEffect(() => {
+    imageToBase64(logoDoriva).then(setLogoBase64).catch(console.error);
+    imageToBase64(bannerMarceneiro).then(setBannerBase64).catch(console.error);
+  }, []);
   
   // Budget state
   const [budgetClient, setBudgetClient] = useState({ name: "", phone: "", email: "" });
@@ -89,6 +120,7 @@ const NotesDialog = () => {
         scale: 2,
         logging: false,
         useCORS: true,
+        allowTaint: true,
       });
       
       const link = document.createElement("a");
@@ -122,6 +154,7 @@ const NotesDialog = () => {
         scale: 2,
         logging: false,
         useCORS: true,
+        allowTaint: true,
       });
       
       const link = document.createElement("a");
@@ -157,14 +190,14 @@ const NotesDialog = () => {
           {/* Banner Image with Logo Overlay */}
           <div className="relative h-32">
             <img 
-              src={bannerMarceneiro} 
+              src={bannerBase64 || bannerMarceneiro} 
               alt="Banner Marcenaria" 
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-[#1a1a2e]" />
             <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
               <img 
-                src={logoDoriva} 
+                src={logoBase64 || logoDoriva} 
                 alt="Doriva Móveis" 
                 className="h-14 drop-shadow-lg"
               />
@@ -249,14 +282,14 @@ const NotesDialog = () => {
           {/* Banner Image with Logo Overlay */}
           <div className="relative h-32">
             <img 
-              src={bannerMarceneiro} 
+              src={bannerBase64 || bannerMarceneiro} 
               alt="Banner Marcenaria" 
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-[#1a1a2e]" />
             <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
               <img 
-                src={logoDoriva} 
+                src={logoBase64 || logoDoriva} 
                 alt="Doriva Móveis" 
                 className="h-14 drop-shadow-lg"
               />

@@ -1,7 +1,7 @@
 import { ImageDown } from "lucide-react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
-import { useRef, useState, ReactNode } from "react";
+import { useRef, useState, ReactNode, useEffect } from "react";
 import logoDoriva from "@/assets/logo-doriva.png";
 import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
 
@@ -11,9 +11,39 @@ interface DownloadImageButtonProps {
   title?: string;
 }
 
+// Convert image URL to base64 for offline support
+const imageToBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } else {
+        reject(new Error('Failed to get canvas context'));
+      }
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
 const DownloadImageButton = ({ filename, children, title }: DownloadImageButtonProps) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [logoBase64, setLogoBase64] = useState<string>("");
+  const [bannerBase64, setBannerBase64] = useState<string>("");
+
+  // Pre-convert images to base64 on mount for offline support
+  useEffect(() => {
+    imageToBase64(logoDoriva).then(setLogoBase64).catch(console.error);
+    imageToBase64(bannerMarceneiro).then(setBannerBase64).catch(console.error);
+  }, []);
 
   const handleDownload = async () => {
     if (!contentRef.current) return;
@@ -21,13 +51,14 @@ const DownloadImageButton = ({ filename, children, title }: DownloadImageButtonP
     setIsCapturing(true);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 150));
       
       const canvas = await html2canvas(contentRef.current, {
         backgroundColor: "#1a1a2e",
         scale: 2,
         logging: false,
         useCORS: true,
+        allowTaint: true,
       });
       
       const link = document.createElement("a");
@@ -55,14 +86,14 @@ const DownloadImageButton = ({ filename, children, title }: DownloadImageButtonP
           {/* Banner Image with Logo Overlay */}
           <div className="relative h-32">
             <img 
-              src={bannerMarceneiro} 
+              src={bannerBase64 || bannerMarceneiro} 
               alt="Banner Marcenaria" 
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-[#1a1a2e]" />
             <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
               <img 
-                src={logoDoriva} 
+                src={logoBase64 || logoDoriva} 
                 alt="Doriva Móveis" 
                 className="h-14 drop-shadow-lg"
               />
