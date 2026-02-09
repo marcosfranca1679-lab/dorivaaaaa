@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from "react";
 
 export interface SavedMeasurement {
   id: string;
@@ -6,8 +6,25 @@ export interface SavedMeasurement {
   label: string;
   inputs: { label: string; value: string }[];
   results: { label: string; value: string; highlight?: boolean }[];
-  timestamp: Date;
+  timestamp: string;
 }
+
+const STORAGE_KEY = "doriva-saved-measurements";
+
+const loadFromStorage = (): SavedMeasurement[] => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveToStorage = (measurements: SavedMeasurement[]) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(measurements));
+  } catch { /* storage full */ }
+};
 
 interface SavedMeasurementsContextType {
   measurements: SavedMeasurement[];
@@ -25,13 +42,17 @@ export const useSavedMeasurements = () => {
 };
 
 export const SavedMeasurementsProvider = ({ children }: { children: ReactNode }) => {
-  const [measurements, setMeasurements] = useState<SavedMeasurement[]>([]);
+  const [measurements, setMeasurements] = useState<SavedMeasurement[]>(loadFromStorage);
+
+  useEffect(() => {
+    saveToStorage(measurements);
+  }, [measurements]);
 
   const addMeasurement = useCallback((m: Omit<SavedMeasurement, "id" | "timestamp">) => {
     setMeasurements(prev => [...prev, {
       ...m,
       id: crypto.randomUUID(),
-      timestamp: new Date(),
+      timestamp: new Date().toISOString(),
     }]);
   }, []);
 

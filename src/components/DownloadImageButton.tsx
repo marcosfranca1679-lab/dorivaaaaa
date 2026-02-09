@@ -22,7 +22,7 @@ const isExternalUrl = (url: string): boolean => {
 };
 
 // Convert image URL to base64 for offline support
-const imageToBase64 = (url: string): Promise<string> => {
+const imageToBase64 = (url: string, format: 'png' | 'jpeg' = 'jpeg'): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     
@@ -39,7 +39,8 @@ const imageToBase64 = (url: string): Promise<string> => {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
+          // Use PNG for images with transparency (like logos)
+          resolve(canvas.toDataURL(format === 'png' ? 'image/png' : 'image/jpeg', 0.9));
         } else {
           reject(new Error('Failed to get canvas context'));
         }
@@ -64,8 +65,8 @@ const DownloadImageButton = ({ filename, children, title }: DownloadImageButtonP
     const loadImages = async () => {
       try {
         const [logo, banner] = await Promise.all([
-          imageToBase64(logoDoriva),
-          imageToBase64(bannerMarceneiro)
+          imageToBase64(logoDoriva, 'png'),
+          imageToBase64(bannerMarceneiro, 'jpeg')
         ]);
         setLogoBase64(logo);
         setBannerBase64(banner);
