@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import DownloadImageButton from "./DownloadImageButton";
+import SaveMeasurementButton from "./SaveMeasurementButton";
 
 const ShelfCalculator = () => {
   const [depth, setDepth] = useState<string>("");
@@ -338,6 +339,24 @@ ${showPiton ? `Medida do Pitão: ${results.pitonMeasure} cm` : ""}
                 </div>
               </div>
             </DownloadImageButton>
+
+            <SaveMeasurementButton
+              measurement={{
+                type: "Prateleira",
+                label: `${shelfCount} prateleira(s) - ${width}×${depth} cm`,
+                inputs: [
+                  { label: "Profundidade", value: `${depth} cm` },
+                  { label: "Largura", value: `${width} cm` },
+                  { label: "Prateleiras", value: `${shelfCount}` },
+                ],
+                results: [
+                  { label: "Prof. Final", value: `${results.finalDepth} cm`, highlight: true },
+                  { label: "Larg. Final", value: `${results.finalWidth} cm`, highlight: true },
+                  { label: "Altura do Vão", value: `${results.gapHeight} cm`, highlight: true },
+                  ...(showPiton ? [{ label: "Medida do Pitão", value: `${results.pitonMeasure} cm` }] : []),
+                ],
+              }}
+            />
           </CardContent>
         </Card>
       )}

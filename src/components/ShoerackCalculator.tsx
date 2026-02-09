@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Ruler, Square, Layers, Package, Minus, Plus } from "lucide-react";
 import DownloadImageButton from "./DownloadImageButton";
+import SaveMeasurementButton from "./SaveMeasurementButton";
 
 type SlideType = "oculta" | "telescopica";
 
@@ -334,6 +335,22 @@ LATERAL (${measurements.side.quantity} peças):
               </div>
             </div>
           </DownloadImageButton>
+
+          <SaveMeasurementButton
+            measurement={{
+              type: "Sapateira",
+              label: `${quantidadeSapateiras} sapateira(s) - ${slideType === "oculta" ? "Oculta" : "Telescópica"} ${tamanhoCorre}cm`,
+              inputs: [
+                { label: "Largura do Vão", value: `${vaoLargura} cm` },
+                { label: "Altura Lateral", value: `${alturaLateralFixa} cm` },
+                { label: "Corrediça", value: `${slideType === "oculta" ? "Oculta" : "Telescópica"} ${tamanhoCorre}cm` },
+              ],
+              results: [
+                { label: "Frente/Traseira", value: `${measurements.frontBack.width.toFixed(1)} × ${measurements.frontBack.height.toFixed(1)} cm (${measurements.frontBack.quantity} pç)`, highlight: true },
+                { label: "Lateral", value: `${measurements.side.width} × ${measurements.side.height.toFixed(1)} cm (${measurements.side.quantity} pç)`, highlight: true },
+              ],
+            }}
+          />
         </div>
       )}
     </div>
