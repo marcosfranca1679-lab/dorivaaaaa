@@ -9,6 +9,28 @@ import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
 const imageToBase64 = (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    // Do NOT set crossOrigin for local assets - causes tainted canvas
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          // Use image/png for logo (preserves transparency, no black background)
+          resolve(canvas.toDataURL('image/png'));
+        } else reject(new Error('No ctx'));
+      } catch (err) { reject(err); }
+    };
+    img.onerror = () => reject(new Error('Failed'));
+    img.src = url;
+  });
+};
+
+const bannerToBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
@@ -35,7 +57,7 @@ const SavedMeasurementsPanel = () => {
   const [bannerBase64, setBannerBase64] = useState("");
 
   useEffect(() => {
-    Promise.all([imageToBase64(logoDoriva), imageToBase64(bannerMarceneiro)])
+    Promise.all([imageToBase64(logoDoriva), bannerToBase64(bannerMarceneiro)])
       .then(([logo, banner]) => { setLogoBase64(logo); setBannerBase64(banner); })
       .catch(() => {});
   }, []);
