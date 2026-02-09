@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Ruler, LayoutGrid, Link2 } from "lucide-react";
 import DownloadImageButton from "./DownloadImageButton";
+import SaveMeasurementButton from "./SaveMeasurementButton";
 
 interface RipadoMeasurements {
   espacoRipados: number;
@@ -316,6 +317,23 @@ LARGURA DE CADA VÃO: ${measurements.larguraVao.toFixed(2)} cm
                   </div>
                 </div>
               </DownloadImageButton>
+
+              <SaveMeasurementButton
+                measurement={{
+                  type: "Ripado",
+                  label: `${quantidadeRipados} ripados - ${tamanhoTotal} cm`,
+                  inputs: [
+                    { label: "Tamanho Total", value: `${tamanhoTotal} cm` },
+                    { label: "Qtd Ripados", value: `${quantidadeRipados}` },
+                    { label: "Largura Ripado", value: `${larguraRipado} cm` },
+                  ],
+                  results: [
+                    { label: "Largura de Cada Vão", value: `${measurements.larguraVao.toFixed(2)} cm`, highlight: true },
+                    { label: "Espaço Ripados", value: `${measurements.espacoRipados.toFixed(2)} cm` },
+                    { label: "Espaço Vãos", value: `${measurements.espacoVaos.toFixed(2)} cm` },
+                  ],
+                }}
+              />
             </>
           )}
         </div>

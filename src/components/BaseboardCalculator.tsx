@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import DownloadImageButton from "./DownloadImageButton";
+import SaveMeasurementButton from "./SaveMeasurementButton";
 
 type MaterialType = "mdf" | "madeira";
 
@@ -213,6 +214,22 @@ ${resultLength !== null ? `Comprimento Final: ${resultLength.toFixed(1)} cm` : "
                 </div>
               </div>
             </DownloadImageButton>
+
+            <SaveMeasurementButton
+              measurement={{
+                type: "Rodapé",
+                label: `${material === "mdf" ? "MDF" : "Madeira"} - ${depth}×${length} cm`,
+                inputs: [
+                  { label: "Material", value: material === "mdf" ? "MDF" : "Madeira" },
+                  { label: "Profundidade", value: `${depth} cm` },
+                  { label: "Comprimento", value: `${length} cm` },
+                ],
+                results: [
+                  ...(resultDepth !== null ? [{ label: "Profundidade Final", value: `${resultDepth.toFixed(1)} cm`, highlight: true }] : []),
+                  ...(resultLength !== null ? [{ label: "Comprimento Final", value: `${resultLength.toFixed(1)} cm`, highlight: true }] : []),
+                ],
+              }}
+            />
           </div>
         )}
       </div>

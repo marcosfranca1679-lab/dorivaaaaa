@@ -8,6 +8,8 @@ import ShelfCalculator from "@/components/ShelfCalculator";
 import CoverCalculator from "@/components/CoverCalculator";
 import NotesDialog from "@/components/NotesDialog";
 import InstallAppButton from "@/components/InstallAppButton";
+import SavedMeasurementsPanel from "@/components/SavedMeasurementsPanel";
+import { SavedMeasurementsProvider } from "@/contexts/SavedMeasurementsContext";
 import logoDoriva from "@/assets/logo-doriva.png";
 import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
 
@@ -39,6 +41,7 @@ const Index = () => {
   );
 
   return (
+    <SavedMeasurementsProvider>
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 wood-pattern">
       {/* Banner Image with gradient fade */}
       <div className="relative w-full h-32 md:h-48 overflow-hidden">
@@ -163,7 +166,9 @@ const Index = () => {
       
       {/* Notes Button */}
       <NotesDialog />
+      <SavedMeasurementsPanel />
     </div>
+    </SavedMeasurementsProvider>
   );
 };
 

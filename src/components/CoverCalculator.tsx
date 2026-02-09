@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import DownloadImageButton from "./DownloadImageButton";
+import SaveMeasurementButton from "./SaveMeasurementButton";
 
 type CoverType = "tampa" | "porta";
 
@@ -489,6 +490,23 @@ const CoverCalculator = () => {
                 </div>
               </div>
             </DownloadImageButton>
+
+            <SaveMeasurementButton
+              measurement={{
+                type: coverType === "tampa" ? "Tampa" : "Porta",
+                label: `${quantityValue} ${coverType === "tampa" ? "tampa(s)" : "porta(s)"} - ${heightValue}×${widthValue} cm`,
+                inputs: [
+                  { label: "Altura do Vão", value: `${totalHeight} cm` },
+                  { label: "Largura do Vão", value: `${totalWidth} cm` },
+                  { label: "Quantidade", value: `${quantity}` },
+                ],
+                results: [
+                  { label: "Largura", value: `${result.width.toFixed(2)} cm`, highlight: true },
+                  { label: "Altura", value: `${result.height.toFixed(2)} cm`, highlight: true },
+                  ...(hasPassingHandle && coverType === "porta" ? [{ label: "Puxador Passante", value: "Sim (+1cm)" }] : []),
+                ],
+              }}
+            />
           </>
         )}
       </CardContent>
