@@ -14,7 +14,7 @@ import { SavedMeasurementsProvider } from "@/contexts/SavedMeasurementsContext";
 import logoDoriva from "@/assets/logo-doriva.png";
 import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
 
-type CalculatorType = "gaveta" | "sapateira" | "ripado" | "rodape" | "prateleira" | "vaos";
+type CalculatorType = "gaveta" | "sapateira" | "ripado" | "rodape" | "prateleira" | "vaos" | "mdf";
 
 const Index = () => {
   const [activeCalculator, setActiveCalculator] = useState<CalculatorType>("gaveta");
