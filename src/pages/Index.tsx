@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
-import { Calculator, Footprints, LayoutGrid, RectangleHorizontal, Layers, DoorOpen } from "lucide-react";
+import { Calculator, Footprints, LayoutGrid, RectangleHorizontal, Layers, DoorOpen, Grid3X3 } from "lucide-react";
 import DrawerCalculator from "@/components/DrawerCalculator";
 import ShoerackCalculator from "@/components/ShoerackCalculator";
 import RipadoCalculator from "@/components/RipadoCalculator";
 import BaseboardCalculator from "@/components/BaseboardCalculator";
 import ShelfCalculator from "@/components/ShelfCalculator";
 import CoverCalculator from "@/components/CoverCalculator";
+import MDFCutCalculator from "@/components/MDFCutCalculator";
 import NotesDialog from "@/components/NotesDialog";
 import InstallAppButton from "@/components/InstallAppButton";
 import SavedMeasurementsPanel from "@/components/SavedMeasurementsPanel";
