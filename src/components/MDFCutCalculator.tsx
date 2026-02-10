@@ -164,7 +164,7 @@ const MDFCutCalculator = () => {
   }, []);
 
   const validPieces = useMemo(
-    () => pieces.filter((p) => p.width > 0 && p.height > 0),
+    () => pieces.filter((p) => p.width > 0 && p.height > 0 && p.quantity > 0),
     [pieces]
   );
 
