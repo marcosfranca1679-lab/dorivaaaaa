@@ -169,6 +169,7 @@ const Index = () => {
           {activeCalculator === "rodape" && <BaseboardCalculator />}
           {activeCalculator === "prateleira" && <ShelfCalculator />}
           {activeCalculator === "vaos" && <CoverCalculator />}
+          {activeCalculator === "mdf" && <MDFCutCalculator />}
         </div>
 
         {/* Footer */}
