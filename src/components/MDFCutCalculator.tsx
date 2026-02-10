@@ -143,13 +143,13 @@ const MDFCutCalculator = () => {
   const [sheetWidth, setSheetWidth] = useState<string>("275");
   const [sheetHeight, setSheetHeight] = useState<string>("185");
   const [pieces, setPieces] = useState<CutPiece[]>([
-    { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "" },
+    { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "", qtyStr: "1" },
   ]);
 
   const addPiece = useCallback(() => {
     setPieces((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "" },
+      { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "", qtyStr: "1" },
     ]);
   }, []);
 
