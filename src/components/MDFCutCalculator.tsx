@@ -9,6 +9,7 @@ interface CutPiece {
   height: number;
   quantity: number;
   label: string;
+  qtyStr: string; // string for controlled input
 }
 
 interface PlacedPiece {
@@ -19,20 +20,19 @@ interface PlacedPiece {
   index: number;
 }
 
-interface ShelfRow {
+interface FreeRect {
+  x: number;
   y: number;
-  height: number;
-  usedWidth: number;
-  pieces: PlacedPiece[];
+  w: number;
+  h: number;
 }
 
-// Shelf-based bin packing algorithm (First Fit Decreasing Height)
+// Guillotine bin packing - much better utilization than shelf-based
 const packPieces = (
   pieces: CutPiece[],
   sheetW: number,
   sheetH: number
 ): { placed: PlacedPiece[]; overflow: PlacedPiece[] } => {
-  // Expand pieces by quantity
   const expanded: { piece: CutPiece; index: number }[] = [];
   pieces.forEach((p) => {
     for (let i = 0; i < p.quantity; i++) {
@@ -40,77 +40,84 @@ const packPieces = (
     }
   });
 
-  // Sort by height descending for better packing
-  expanded.sort((a, b) => Math.max(b.piece.height, b.piece.width) - Math.max(a.piece.height, a.piece.width));
+  // Sort by area descending for better packing
+  expanded.sort((a, b) => {
+    const areaB = b.piece.width * b.piece.height;
+    const areaA = a.piece.width * a.piece.height;
+    if (areaB !== areaA) return areaB - areaA;
+    return Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height);
+  });
 
-  const shelves: ShelfRow[] = [];
+  const freeRects: FreeRect[] = [{ x: 0, y: 0, w: sheetW, h: sheetH }];
   const placed: PlacedPiece[] = [];
   const overflow: PlacedPiece[] = [];
 
   for (const { piece, index } of expanded) {
-    let w = piece.width;
-    let h = piece.height;
-    let rotated = false;
+    let bestRectIdx = -1;
+    let bestRotated = false;
+    let bestScore = Infinity;
 
-    // Try rotation if piece doesn't fit
-    if (w > sheetW && h <= sheetW) {
-      [w, h] = [h, w];
-      rotated = true;
-    } else if (w > sheetW && h > sheetW) {
+    for (let ri = 0; ri < freeRects.length; ri++) {
+      const rect = freeRects[ri];
+
+      // Try normal orientation
+      if (piece.width <= rect.w && piece.height <= rect.h) {
+        // Best short side fit
+        const score = Math.min(rect.w - piece.width, rect.h - piece.height);
+        if (score < bestScore) {
+          bestScore = score;
+          bestRectIdx = ri;
+          bestRotated = false;
+        }
+      }
+
+      // Try rotated
+      if (piece.height <= rect.w && piece.width <= rect.h) {
+        const score = Math.min(rect.w - piece.height, rect.h - piece.width);
+        if (score < bestScore) {
+          bestScore = score;
+          bestRectIdx = ri;
+          bestRotated = true;
+        }
+      }
+    }
+
+    if (bestRectIdx === -1) {
       overflow.push({ piece, x: 0, y: 0, rotated: false, index });
       continue;
     }
 
-    // Check if either dimension exceeds sheet
-    if (w > sheetW || h > sheetH) {
-      // Try rotation
-      if (h <= sheetW && w <= sheetH) {
-        [w, h] = [h, w];
-        rotated = true;
+    const rect = freeRects[bestRectIdx];
+    const pw = bestRotated ? piece.height : piece.width;
+    const ph = bestRotated ? piece.width : piece.height;
+
+    placed.push({ piece, x: rect.x, y: rect.y, rotated: bestRotated, index });
+
+    // Split remaining space (guillotine split - choose shorter leftover axis)
+    freeRects.splice(bestRectIdx, 1);
+
+    const rightW = rect.w - pw;
+    const bottomH = rect.h - ph;
+
+    if (rightW > 0 && bottomH > 0) {
+      // Split along shorter leftover to minimize waste
+      if (rightW < bottomH) {
+        // Horizontal split
+        if (rightW > 0) freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: ph });
+        if (bottomH > 0) freeRects.push({ x: rect.x, y: rect.y + ph, w: rect.w, h: bottomH });
       } else {
-        overflow.push({ piece, x: 0, y: 0, rotated: false, index });
-        continue;
+        // Vertical split
+        if (bottomH > 0) freeRects.push({ x: rect.x, y: rect.y + ph, w: pw, h: bottomH });
+        if (rightW > 0) freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: rect.h });
       }
+    } else if (rightW > 0) {
+      freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: rect.h });
+    } else if (bottomH > 0) {
+      freeRects.push({ x: rect.x, y: rect.y + ph, w: rect.w, h: bottomH });
     }
 
-    let placedInShelf = false;
-
-    // Try to fit in existing shelves
-    for (const shelf of shelves) {
-      if (shelf.usedWidth + w <= sheetW && h <= shelf.height) {
-        placed.push({ piece, x: shelf.usedWidth, y: shelf.y, rotated, index });
-        shelf.usedWidth += w;
-        shelf.pieces.push({ piece, x: shelf.usedWidth - w, y: shelf.y, rotated, index });
-        placedInShelf = true;
-        break;
-      }
-      // Try rotated
-      if (!rotated && shelf.usedWidth + h <= sheetW && w <= shelf.height) {
-        placed.push({ piece, x: shelf.usedWidth, y: shelf.y, rotated: true, index });
-        shelf.usedWidth += h;
-        shelf.pieces.push({ piece, x: shelf.usedWidth - h, y: shelf.y, rotated: true, index });
-        placedInShelf = true;
-        break;
-      }
-    }
-
-    if (!placedInShelf) {
-      const currentY = shelves.reduce((sum, s) => sum + s.height, 0);
-      if (currentY + h <= sheetH && w <= sheetW) {
-        const newShelf: ShelfRow = { y: currentY, height: h, usedWidth: w, pieces: [] };
-        newShelf.pieces.push({ piece, x: 0, y: currentY, rotated, index });
-        shelves.push(newShelf);
-        placed.push({ piece, x: 0, y: currentY, rotated, index });
-      } else if (currentY + w <= sheetH && h <= sheetW) {
-        // Try rotated in new shelf
-        const newShelf: ShelfRow = { y: currentY, height: w, usedWidth: h, pieces: [] };
-        newShelf.pieces.push({ piece, x: 0, y: currentY, rotated: true, index });
-        shelves.push(newShelf);
-        placed.push({ piece, x: 0, y: currentY, rotated: true, index });
-      } else {
-        overflow.push({ piece, x: 0, y: 0, rotated: false, index });
-      }
-    }
+    // Sort free rects by area ascending for best fit
+    freeRects.sort((a, b) => a.w * a.h - b.w * b.h);
   }
 
   return { placed, overflow };
@@ -136,13 +143,13 @@ const MDFCutCalculator = () => {
   const [sheetWidth, setSheetWidth] = useState<string>("275");
   const [sheetHeight, setSheetHeight] = useState<string>("185");
   const [pieces, setPieces] = useState<CutPiece[]>([
-    { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "" },
+    { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "", qtyStr: "1" },
   ]);
 
   const addPiece = useCallback(() => {
     setPieces((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "" },
+      { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "", qtyStr: "1" },
     ]);
   }, []);
 
@@ -157,7 +164,7 @@ const MDFCutCalculator = () => {
   }, []);
 
   const validPieces = useMemo(
-    () => pieces.filter((p) => p.width > 0 && p.height > 0),
+    () => pieces.filter((p) => p.width > 0 && p.height > 0 && p.quantity > 0),
     [pieces]
   );
 
@@ -307,14 +314,21 @@ const MDFCutCalculator = () => {
                   <input
                     type="number"
                     min={1}
-                    value={piece.quantity}
-                    onChange={(e) =>
-                      updatePiece(
-                        piece.id,
-                        "quantity",
-                        Math.max(1, parseInt(e.target.value) || 1)
-                      )
-                    }
+                    value={piece.qtyStr}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const num = parseInt(raw) || 0;
+                      setPieces(prev => prev.map(p =>
+                        p.id === piece.id ? { ...p, qtyStr: raw, quantity: Math.max(0, num) } : p
+                      ));
+                    }}
+                    onBlur={() => {
+                      if (!piece.qtyStr || piece.quantity < 1) {
+                        setPieces(prev => prev.map(p =>
+                          p.id === piece.id ? { ...p, qtyStr: "1", quantity: 1 } : p
+                        ));
+                      }
+                    }}
                     className="input-wood w-full !py-2 text-sm"
                   />
                 </div>
