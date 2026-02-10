@@ -314,14 +314,21 @@ const MDFCutCalculator = () => {
                   <input
                     type="number"
                     min={1}
-                    value={piece.quantity}
-                    onChange={(e) =>
-                      updatePiece(
-                        piece.id,
-                        "quantity",
-                        Math.max(1, parseInt(e.target.value) || 1)
-                      )
-                    }
+                    value={piece.qtyStr}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const num = parseInt(raw) || 0;
+                      setPieces(prev => prev.map(p =>
+                        p.id === piece.id ? { ...p, qtyStr: raw, quantity: Math.max(0, num) } : p
+                      ));
+                    }}
+                    onBlur={() => {
+                      if (!piece.qtyStr || piece.quantity < 1) {
+                        setPieces(prev => prev.map(p =>
+                          p.id === piece.id ? { ...p, qtyStr: "1", quantity: 1 } : p
+                        ));
+                      }
+                    }}
                     className="input-wood w-full !py-2 text-sm"
                   />
                 </div>
