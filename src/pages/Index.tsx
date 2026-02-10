@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
-import { Calculator, Footprints, LayoutGrid, RectangleHorizontal, Layers, DoorOpen } from "lucide-react";
+import { Calculator, Footprints, LayoutGrid, RectangleHorizontal, Layers, DoorOpen, Grid3X3 } from "lucide-react";
 import DrawerCalculator from "@/components/DrawerCalculator";
 import ShoerackCalculator from "@/components/ShoerackCalculator";
 import RipadoCalculator from "@/components/RipadoCalculator";
 import BaseboardCalculator from "@/components/BaseboardCalculator";
 import ShelfCalculator from "@/components/ShelfCalculator";
 import CoverCalculator from "@/components/CoverCalculator";
+import MDFCutCalculator from "@/components/MDFCutCalculator";
 import NotesDialog from "@/components/NotesDialog";
 import InstallAppButton from "@/components/InstallAppButton";
 import SavedMeasurementsPanel from "@/components/SavedMeasurementsPanel";
@@ -13,7 +14,7 @@ import { SavedMeasurementsProvider } from "@/contexts/SavedMeasurementsContext";
 import logoDoriva from "@/assets/logo-doriva.png";
 import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
 
-type CalculatorType = "gaveta" | "sapateira" | "ripado" | "rodape" | "prateleira" | "vaos";
+type CalculatorType = "gaveta" | "sapateira" | "ripado" | "rodape" | "prateleira" | "vaos" | "mdf";
 
 const Index = () => {
   const [activeCalculator, setActiveCalculator] = useState<CalculatorType>("gaveta");
@@ -110,7 +111,7 @@ const Index = () => {
               <span className="text-[10px] md:text-sm">Ripados</span>
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-1 md:gap-2">
+          <div className="grid grid-cols-3 gap-1 md:gap-2 mb-1 md:mb-2">
             <button
               onClick={() => switchCalculator("rodape")}
               className={`p-2 md:p-4 rounded-2xl transition-all duration-300 font-semibold flex flex-col items-center justify-center gap-1 ${
@@ -145,6 +146,19 @@ const Index = () => {
               <span className="text-[10px] md:text-sm">Vãos</span>
             </button>
           </div>
+          <div className="grid grid-cols-1 gap-1 md:gap-2">
+            <button
+              onClick={() => switchCalculator("mdf")}
+              className={`p-2 md:p-4 rounded-2xl transition-all duration-300 font-semibold flex flex-row items-center justify-center gap-2 ${
+                activeCalculator === "mdf"
+                  ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-lg scale-[1.02]"
+                  : "bg-background/50 text-muted-foreground hover:bg-secondary/50 hover:scale-[1.01]"
+              }`}
+            >
+              <Grid3X3 className="w-4 h-4 md:w-5 md:h-5" />
+              <span className="text-[10px] md:text-sm">Cortes de MDF</span>
+            </button>
+          </div>
         </div>
 
         {/* Active Calculator */}
@@ -155,6 +169,7 @@ const Index = () => {
           {activeCalculator === "rodape" && <BaseboardCalculator />}
           {activeCalculator === "prateleira" && <ShelfCalculator />}
           {activeCalculator === "vaos" && <CoverCalculator />}
+          {activeCalculator === "mdf" && <MDFCutCalculator />}
         </div>
 
         {/* Footer */}
