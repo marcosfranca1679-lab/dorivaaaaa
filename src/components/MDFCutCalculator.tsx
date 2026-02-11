@@ -571,6 +571,34 @@ const MDFCutCalculator = () => {
                   ))}
                 </div>
               </div>
+              {/* Visual Distribution in download */}
+              <div className="border-t border-white/20 pt-3 mt-2">
+                <p className="text-amber-400 font-semibold mb-2">Distribuição Visual:</p>
+                <div className="relative bg-white/5 rounded border border-white/20"
+                  style={{ width: '100%', aspectRatio: `${sw}/${sh}` }}>
+                  {result.placed.map((p, i) => {
+                    const pw = p.rotated ? p.piece.height : p.piece.width;
+                    const ph = p.rotated ? p.piece.width : p.piece.height;
+                    const color = getColor(p.piece.id, validPieces);
+                    const pieceIdx = pieces.findIndex((pc) => pc.id === p.piece.id) + 1;
+                    return (
+                      <div key={i} className="absolute border border-white/20 flex items-center justify-center"
+                        style={{
+                          left: `${(p.x / sw) * 100}%`,
+                          top: `${(p.y / sh) * 100}%`,
+                          width: `${(pw / sw) * 100}%`,
+                          height: `${(ph / sh) * 100}%`,
+                          backgroundColor: color,
+                          opacity: 0.8,
+                        }}>
+                        <span className="text-[8px] text-white font-bold drop-shadow">
+                          {p.piece.label || `P${pieceIdx}`} {pw}×{ph}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
               {result.overflow.length > 0 && (
                 <div className="bg-red-500/20 rounded-lg p-3">
                   <p className="text-red-400 font-semibold text-sm">

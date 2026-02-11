@@ -315,6 +315,32 @@ LARGURA DE CADA VÃO: ${measurements.larguraVao.toFixed(2)} cm
                       </div>
                     </div>
                   </div>
+                  {/* Visual Distribution in download */}
+                  <div className="border-t border-white/20 pt-3 mt-2">
+                    <p className="text-amber-400 font-semibold mb-2">Distribuição Visual:</p>
+                    <div className="flex items-center gap-0.5 overflow-hidden rounded">
+                      {Array.from({ length: parseInt(quantidadeRipados) || 0 }).map((_, index) => {
+                        const isLast = index === parseInt(quantidadeRipados) - 1;
+                        const quantidade = parseInt(quantidadeRipados);
+                        return (
+                          <div key={index} className="flex items-center gap-0.5">
+                            <div className={`h-8 bg-amber-500/40 rounded flex items-center justify-center px-1 ${emendaAtivada && isLast ? 'border-r-2 border-dashed border-amber-400' : ''}`}
+                              style={{ minWidth: '14px' }}>
+                              <span className="text-[7px] text-white font-bold">R{index + 1}</span>
+                            </div>
+                            {index < quantidade - 1 && (
+                              <div className="h-5 bg-white/10 rounded flex items-center justify-center" style={{ minWidth: '10px' }}>
+                                <span className="text-[6px] text-white/50">V</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-white/50 text-[10px] mt-1 text-center">
+                      Vão: {measurements.larguraVao.toFixed(2)} cm | Ripado: {larguraRipado} cm
+                    </p>
+                  </div>
                 </div>
               </DownloadImageButton>
 

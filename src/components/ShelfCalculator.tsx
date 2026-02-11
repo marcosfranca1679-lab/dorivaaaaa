@@ -336,6 +336,24 @@ ${showPiton ? `Medida do Pitão: ${results.pitonMeasure} cm` : ""}
                       </div>
                     )}
                   </div>
+                  {/* Visual Distribution in download */}
+                  <div className="border-t border-white/20 pt-3 mt-2">
+                    <p className="text-amber-400 font-semibold mb-2">Distribuição Visual:</p>
+                    <div className="space-y-0.5">
+                      {Array.from({ length: parseInt(shelfCount) + 1 || 1 }).map((_, index) => (
+                        <div key={index}>
+                          <div className="bg-white/10 rounded p-1 text-center">
+                            <span className="text-[10px] text-white/60">Vão {index + 1}: {results.gapHeight} cm</span>
+                          </div>
+                          {index < parseInt(shelfCount) && (
+                            <div className="bg-amber-500/30 rounded p-1 text-center mt-0.5">
+                              <span className="text-[9px] text-white font-medium">Prateleira {index + 1}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </DownloadImageButton>
