@@ -191,9 +191,9 @@ const MDFCutCalculator = () => {
 
   const hasResults = result !== null && stats !== null;
 
-  // Visual scale
-  const maxVisualWidth = 340;
-  const scale = hasSheet ? Math.min(maxVisualWidth / sw, 400 / sh) : 1;
+  // Visual scale - responsive
+  const maxVisualWidth = 360;
+  const scale = hasSheet ? Math.min(maxVisualWidth / sw, 500 / sh) : 1;
 
   return (
     <div className="space-y-6">
@@ -409,18 +409,18 @@ const MDFCutCalculator = () => {
           {/* Visual distribution */}
           <div className="mb-4">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              Distribuição Visual
+              📐 Distribuição Visual — Corte na Serra de Mesa
             </h3>
-            <div className="flex justify-center overflow-x-auto pb-2">
+            <div className="flex justify-center overflow-x-auto pb-6 pt-2 pl-8">
               <div
-                className="relative border-2 border-foreground/30 rounded-lg bg-secondary/20"
+                className="relative border-2 border-foreground/40 bg-secondary/10"
                 style={{
                   width: sw * scale,
                   height: sh * scale,
                 }}
               >
-                {/* Grid lines */}
-                <div className="absolute inset-0 opacity-10"
+                {/* Grid lines every 50cm */}
+                <div className="absolute inset-0 opacity-[0.07]"
                   style={{
                     backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
                     backgroundSize: `${50 * scale}px ${50 * scale}px`,
@@ -432,39 +432,81 @@ const MDFCutCalculator = () => {
                   const ph = p.rotated ? p.piece.width : p.piece.height;
                   const color = getColor(p.piece.id, validPieces);
                   const pieceIdx = pieces.findIndex((pc) => pc.id === p.piece.id) + 1;
+                  const pxW = pw * scale;
+                  const pxH = ph * scale;
+                  const showLabel = pxW > 20 && pxH > 14;
+                  const showDims = pxW > 36 && pxH > 28;
 
                   return (
                     <div
                       key={i}
-                      className="absolute border border-foreground/20 flex items-center justify-center overflow-hidden"
+                      className="absolute border border-foreground/30 flex flex-col items-center justify-center overflow-hidden"
                       style={{
                         left: p.x * scale,
                         top: p.y * scale,
-                        width: pw * scale,
-                        height: ph * scale,
+                        width: pxW,
+                        height: pxH,
                         backgroundColor: color,
-                        opacity: 0.8,
+                        opacity: 0.85,
                       }}
-                      title={`${p.piece.label || `Peça ${pieceIdx}`}: ${p.piece.width}×${p.piece.height} cm${p.rotated ? " (girada)" : ""}`}
+                      title={`${p.piece.label || `Peça ${pieceIdx}`}: ${pw}×${ph} cm${p.rotated ? " (girada)" : ""}`}
                     >
-                      {pw * scale > 28 && ph * scale > 16 && (
-                        <span className="text-[9px] md:text-[10px] font-bold text-white text-center leading-tight drop-shadow-md px-0.5">
-                          {pieceIdx}
+                      {showLabel && (
+                        <span className="text-[8px] md:text-[10px] font-bold text-white drop-shadow-md leading-none">
+                          {p.piece.label || `P${pieceIdx}`}
                           {p.rotated && " ↻"}
+                        </span>
+                      )}
+                      {showDims && (
+                        <span className="text-[7px] md:text-[9px] text-white/90 drop-shadow-md leading-none mt-0.5">
+                          {pw}×{ph}
                         </span>
                       )}
                     </div>
                   );
                 })}
 
-                {/* Sheet dimensions labels */}
-                <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground font-medium">
-                  {sw} cm
+                {/* Dimension labels */}
+                <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground font-semibold whitespace-nowrap">
+                  ← {sw} cm →
                 </div>
-                <div className="absolute -left-1 top-1/2 -translate-y-1/2 writing-vertical text-[10px] text-muted-foreground font-medium">
-                  {sh} cm
+                <div className="absolute top-1/2 -left-6 -translate-y-1/2 text-[10px] text-muted-foreground font-semibold"
+                  style={{ writingMode: "vertical-rl", transform: "rotate(180deg) translateX(50%)" }}>
+                  ← {sh} cm →
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Cut list with exact measurements */}
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">
+              📏 Lista de Cortes (Serra de Mesa)
+            </h3>
+            <div className="space-y-1.5">
+              {result.placed.map((p, i) => {
+                const pw = p.rotated ? p.piece.height : p.piece.width;
+                const ph = p.rotated ? p.piece.width : p.piece.height;
+                const pieceIdx = pieces.findIndex((pc) => pc.id === p.piece.id) + 1;
+                const color = getColor(p.piece.id, validPieces);
+                return (
+                  <div key={i} className="flex items-center gap-2 p-2 bg-secondary/20 rounded-lg text-xs">
+                    <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: color, opacity: 0.85 }} />
+                    <span className="font-semibold text-foreground min-w-[60px]">
+                      {p.piece.label || `Peça ${pieceIdx}`}
+                    </span>
+                    <span className="text-primary font-bold">
+                      {pw} × {ph} cm
+                    </span>
+                    {p.rotated && (
+                      <span className="text-muted-foreground text-[10px]">(girada 90°)</span>
+                    )}
+                    <span className="text-muted-foreground ml-auto text-[10px]">
+                      pos: {p.x},{p.y}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
