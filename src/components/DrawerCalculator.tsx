@@ -51,8 +51,8 @@ const DrawerCalculator = () => {
     // Altura de cada lateral (gaveta)
     const alturaLateral = alturaDisponivel / quantidadeGavetas;
 
-    // Altura da frente/traseira: lateral - 2.5 (e -2 se puxador canoa)
-    let alturaFrenteTraseira = alturaLateral - 2.5;
+    // Altura da frente/traseira: com rebaixo -2cm, sem rebaixo -2.5cm (e -2 se puxador canoa)
+    let alturaFrenteTraseira = comRebaixo ? alturaLateral - 2 : alturaLateral - 2.5;
     if (comPuxadorCanoa) {
       alturaFrenteTraseira -= 2;
     }
@@ -301,7 +301,7 @@ LATERAL (${measurements.side.quantity} peças):
             <h3 className="text-sm font-semibold text-accent mb-2">📋 Descontos Aplicados</h3>
             <ul className="text-xs text-muted-foreground space-y-1">
               <li>• <strong>Largura Frente/Traseira:</strong> {slideType === "oculta" ? (comRebaixo ? "-2,1 cm (oculta com rebaixo)" : "-4 cm (oculta)") : "-5,7 cm (telescópica)"}</li>
-              <li>• <strong>Altura Frente/Traseira:</strong> -2,5 cm da lateral{comPuxadorCanoa ? " -2 cm (puxador canoa)" : ""}</li>
+              <li>• <strong>Altura Frente/Traseira:</strong> {comRebaixo ? "-2 cm (rebaixo)" : "-2,5 cm"} da lateral{comPuxadorCanoa ? " -2 cm (puxador canoa)" : ""}</li>
               <li>• <strong>Vão entre gavetas:</strong> 3 cm por gaveta</li>
             </ul>
           </div>
@@ -407,6 +407,24 @@ LATERAL (${measurements.side.quantity} peças):
                     <p className="text-white/60 text-xs">Lateral ({measurements.side.quantity} peças)</p>
                     <p className="text-amber-400 font-bold text-lg">{measurements.side.width} × {measurements.side.height.toFixed(1)} cm</p>
                   </div>
+                </div>
+              </div>
+              {/* Visual Distribution in download */}
+              <div className="border-t border-white/20 pt-3 mt-3">
+                <p className="text-amber-400 font-semibold mb-2">Distribuição Visual:</p>
+                <div className="space-y-1">
+                  {Array.from({ length: quantidadeGavetas }).map((_, index) => (
+                    <div key={index}>
+                      <div className="bg-amber-500/30 rounded p-2 text-center">
+                        <span className="text-white text-xs font-medium">
+                          Gaveta {index + 1} — {measurements.alturaLateral.toFixed(1)} cm
+                        </span>
+                      </div>
+                      <div className="bg-white/10 rounded p-1 text-center mt-0.5">
+                        <span className="text-white/60 text-[10px]">Vão {index + 1} — 3 cm</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

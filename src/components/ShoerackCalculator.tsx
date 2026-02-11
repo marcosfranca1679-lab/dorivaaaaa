@@ -332,6 +332,19 @@ LATERAL (${measurements.side.quantity} peças):
                     <p className="text-amber-400 font-bold text-lg">{measurements.side.width} × {measurements.side.height.toFixed(1)} cm</p>
                   </div>
                 </div>
+                {/* Visual Distribution in download */}
+                <div className="border-t border-white/20 pt-3 mt-2">
+                  <p className="text-amber-400 font-semibold mb-2">Distribuição Visual:</p>
+                  <div className="space-y-1">
+                    {Array.from({ length: quantidadeSapateiras }).map((_, index) => (
+                      <div key={index} className="bg-amber-500/30 rounded p-2 text-center">
+                        <span className="text-white text-xs font-medium">
+                          Sapateira {index + 1}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </DownloadImageButton>
