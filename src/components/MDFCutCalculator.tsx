@@ -9,7 +9,7 @@ interface CutPiece {
   height: number;
   quantity: number;
   label: string;
-  qtyStr: string; // string for controlled input
+  qtyStr: string;
 }
 
 interface PlacedPiece {
@@ -27,30 +27,23 @@ interface FreeRect {
   h: number;
 }
 
-// Guillotine bin packing - much better utilization than shelf-based
-const packPieces = (
-  pieces: CutPiece[],
+interface CutLine {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+// Guillotine bin packing with multiple strategies - picks best result
+const packWithStrategy = (
+  expanded: { piece: CutPiece; index: number }[],
   sheetW: number,
   sheetH: number
-): { placed: PlacedPiece[]; overflow: PlacedPiece[] } => {
-  const expanded: { piece: CutPiece; index: number }[] = [];
-  pieces.forEach((p) => {
-    for (let i = 0; i < p.quantity; i++) {
-      expanded.push({ piece: p, index: i });
-    }
-  });
-
-  // Sort by area descending for better packing
-  expanded.sort((a, b) => {
-    const areaB = b.piece.width * b.piece.height;
-    const areaA = a.piece.width * a.piece.height;
-    if (areaB !== areaA) return areaB - areaA;
-    return Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height);
-  });
-
+): { placed: PlacedPiece[]; overflow: PlacedPiece[]; cutLines: CutLine[] } => {
   const freeRects: FreeRect[] = [{ x: 0, y: 0, w: sheetW, h: sheetH }];
   const placed: PlacedPiece[] = [];
   const overflow: PlacedPiece[] = [];
+  const cutLines: CutLine[] = [];
 
   for (const { piece, index } of expanded) {
     let bestRectIdx = -1;
@@ -60,9 +53,8 @@ const packPieces = (
     for (let ri = 0; ri < freeRects.length; ri++) {
       const rect = freeRects[ri];
 
-      // Try normal orientation
+      // Normal
       if (piece.width <= rect.w && piece.height <= rect.h) {
-        // Best short side fit
         const score = Math.min(rect.w - piece.width, rect.h - piece.height);
         if (score < bestScore) {
           bestScore = score;
@@ -71,7 +63,7 @@ const packPieces = (
         }
       }
 
-      // Try rotated
+      // Rotated
       if (piece.height <= rect.w && piece.width <= rect.h) {
         const score = Math.min(rect.w - piece.height, rect.h - piece.width);
         if (score < bestScore) {
@@ -93,38 +85,93 @@ const packPieces = (
 
     placed.push({ piece, x: rect.x, y: rect.y, rotated: bestRotated, index });
 
-    // Split remaining space (guillotine split - choose shorter leftover axis)
-    freeRects.splice(bestRectIdx, 1);
-
+    // Record cut lines (full straight cuts for table saw)
     const rightW = rect.w - pw;
     const bottomH = rect.h - ph;
 
+    freeRects.splice(bestRectIdx, 1);
+
     if (rightW > 0 && bottomH > 0) {
-      // Split along shorter leftover to minimize waste
-      if (rightW < bottomH) {
-        // Horizontal split
-        if (rightW > 0) freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: ph });
-        if (bottomH > 0) freeRects.push({ x: rect.x, y: rect.y + ph, w: rect.w, h: bottomH });
+      if (rightW <= bottomH) {
+        // Horizontal split: cut horizontally across full width of rect
+        cutLines.push({ x1: rect.x, y1: rect.y + ph, x2: rect.x + rect.w, y2: rect.y + ph });
+        if (rightW > 0) {
+          // Vertical cut on top strip
+          cutLines.push({ x1: rect.x + pw, y1: rect.y, x2: rect.x + pw, y2: rect.y + ph });
+          freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: ph });
+        }
+        freeRects.push({ x: rect.x, y: rect.y + ph, w: rect.w, h: bottomH });
       } else {
-        // Vertical split
-        if (bottomH > 0) freeRects.push({ x: rect.x, y: rect.y + ph, w: pw, h: bottomH });
-        if (rightW > 0) freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: rect.h });
+        // Vertical split: cut vertically across full height of rect
+        cutLines.push({ x1: rect.x + pw, y1: rect.y, x2: rect.x + pw, y2: rect.y + rect.h });
+        if (bottomH > 0) {
+          // Horizontal cut on left strip
+          cutLines.push({ x1: rect.x, y1: rect.y + ph, x2: rect.x + pw, y2: rect.y + ph });
+          freeRects.push({ x: rect.x, y: rect.y + ph, w: pw, h: bottomH });
+        }
+        freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: rect.h });
       }
     } else if (rightW > 0) {
+      cutLines.push({ x1: rect.x + pw, y1: rect.y, x2: rect.x + pw, y2: rect.y + rect.h });
       freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: rect.h });
     } else if (bottomH > 0) {
+      cutLines.push({ x1: rect.x, y1: rect.y + ph, x2: rect.x + rect.w, y2: rect.y + ph });
       freeRects.push({ x: rect.x, y: rect.y + ph, w: rect.w, h: bottomH });
     }
 
-    // Sort free rects by area ascending for best fit
+    // Sort free rects: prefer smaller ones for tighter fit
     freeRects.sort((a, b) => a.w * a.h - b.w * b.h);
   }
 
-  return { placed, overflow };
+  return { placed, overflow, cutLines };
+};
+
+const packPieces = (
+  pieces: CutPiece[],
+  sheetW: number,
+  sheetH: number
+): { placed: PlacedPiece[]; overflow: PlacedPiece[]; cutLines: CutLine[] } => {
+  const expanded: { piece: CutPiece; index: number }[] = [];
+  pieces.forEach((p) => {
+    for (let i = 0; i < p.quantity; i++) {
+      expanded.push({ piece: p, index: i });
+    }
+  });
+
+  // Try multiple sorting strategies, pick best
+  const strategies: ((a: { piece: CutPiece }, b: { piece: CutPiece }) => number)[] = [
+    // Area descending
+    (a, b) => b.piece.width * b.piece.height - a.piece.width * a.piece.height,
+    // Max side descending
+    (a, b) => Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height),
+    // Height descending
+    (a, b) => b.piece.height - a.piece.height || b.piece.width - a.piece.width,
+    // Width descending
+    (a, b) => b.piece.width - a.piece.width || b.piece.height - a.piece.height,
+    // Perimeter descending
+    (a, b) => (b.piece.width + b.piece.height) - (a.piece.width + a.piece.height),
+  ];
+
+  let bestResult: ReturnType<typeof packWithStrategy> | null = null;
+  let bestUsed = -1;
+
+  for (const sortFn of strategies) {
+    const sorted = [...expanded].sort(sortFn);
+    const res = packWithStrategy(sorted, sheetW, sheetH);
+    const usedArea = res.placed.reduce((s, p) => s + p.piece.width * p.piece.height, 0);
+    // Prefer: fewer overflows, then more used area
+    const score = res.placed.length * 1000000 + usedArea;
+    if (score > bestUsed) {
+      bestUsed = score;
+      bestResult = res;
+    }
+  }
+
+  return bestResult!;
 };
 
 const COLORS = [
-  "hsl(20, 55%, 30%)",
+  "hsl(20, 55%, 35%)",
   "hsl(28, 65%, 48%)",
   "hsl(200, 50%, 45%)",
   "hsl(150, 45%, 40%)",
@@ -137,6 +184,158 @@ const COLORS = [
 const getColor = (pieceId: string, allPieces: CutPiece[]) => {
   const idx = allPieces.findIndex((p) => p.id === pieceId);
   return COLORS[idx % COLORS.length];
+};
+
+// Deduplicate cut lines (avoid drawing same line twice)
+const deduplicateLines = (lines: CutLine[]): CutLine[] => {
+  const seen = new Set<string>();
+  return lines.filter((l) => {
+    const key = `${l.x1.toFixed(1)},${l.y1.toFixed(1)},${l.x2.toFixed(1)},${l.y2.toFixed(1)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+const VisualCutMap = ({
+  placed,
+  cutLines,
+  sw,
+  sh,
+  scale,
+  pieces,
+  validPieces,
+  forDownload = false,
+}: {
+  placed: PlacedPiece[];
+  cutLines: CutLine[];
+  sw: number;
+  sh: number;
+  scale: number;
+  pieces: CutPiece[];
+  validPieces: CutPiece[];
+  forDownload?: boolean;
+}) => {
+  const uniqueLines = deduplicateLines(cutLines);
+  const lineColor = forDownload ? "rgba(255,60,60,0.7)" : "hsl(0, 80%, 55%)";
+  const lineWidth = forDownload ? 1.5 : 2;
+
+  return (
+    <div
+      className="relative"
+      style={{
+        width: sw * scale,
+        height: sh * scale,
+        border: forDownload ? "2px solid rgba(255,255,255,0.4)" : undefined,
+        borderWidth: forDownload ? undefined : 2,
+        borderStyle: forDownload ? undefined : "solid",
+        borderColor: forDownload ? undefined : "hsl(var(--foreground) / 0.4)",
+        background: forDownload ? "rgba(255,255,255,0.05)" : "hsl(var(--secondary) / 0.1)",
+      }}
+    >
+      {/* Grid every 50cm */}
+      {!forDownload && (
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
+            backgroundSize: `${50 * scale}px ${50 * scale}px`,
+          }}
+        />
+      )}
+
+      {/* Placed pieces */}
+      {placed.map((p, i) => {
+        const pw = p.rotated ? p.piece.height : p.piece.width;
+        const ph = p.rotated ? p.piece.width : p.piece.height;
+        const color = getColor(p.piece.id, validPieces);
+        const pieceIdx = pieces.findIndex((pc) => pc.id === p.piece.id) + 1;
+        const pxW = pw * scale;
+        const pxH = ph * scale;
+        const showLabel = pxW > 18 && pxH > 12;
+        const showDims = pxW > 32 && pxH > 24;
+
+        return (
+          <div
+            key={i}
+            className="absolute flex flex-col items-center justify-center overflow-hidden"
+            style={{
+              left: p.x * scale,
+              top: p.y * scale,
+              width: pxW,
+              height: pxH,
+              backgroundColor: color,
+              opacity: 0.85,
+            }}
+            title={`${p.piece.label || `Peça ${pieceIdx}`}: ${pw}×${ph} cm${p.rotated ? " (girada)" : ""}`}
+          >
+            {showLabel && (
+              <span
+                className="font-bold drop-shadow-md leading-none"
+                style={{
+                  fontSize: forDownload ? 10 : Math.min(10, pxW / 6),
+                  color: "white",
+                }}
+              >
+                {p.piece.label || `P${pieceIdx}`}
+                {p.rotated && " ↻"}
+              </span>
+            )}
+            {showDims && (
+              <span
+                className="drop-shadow-md leading-none mt-0.5"
+                style={{
+                  fontSize: forDownload ? 9 : Math.min(9, pxW / 7),
+                  color: "rgba(255,255,255,0.9)",
+                }}
+              >
+                {pw}×{ph}
+              </span>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Cut lines - red dashed lines showing where to cut */}
+      <svg
+        className="absolute inset-0 pointer-events-none"
+        width={sw * scale}
+        height={sh * scale}
+        style={{ overflow: "visible" }}
+      >
+        {uniqueLines.map((line, i) => (
+          <line
+            key={i}
+            x1={line.x1 * scale}
+            y1={line.y1 * scale}
+            x2={line.x2 * scale}
+            y2={line.y2 * scale}
+            stroke={lineColor}
+            strokeWidth={lineWidth}
+            strokeDasharray="6,3"
+            opacity={0.8}
+          />
+        ))}
+      </svg>
+
+      {/* Dimension labels */}
+      {!forDownload && (
+        <>
+          <div
+            className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground font-semibold whitespace-nowrap"
+          >
+            ← {sw} cm →
+          </div>
+          <div
+            className="absolute top-1/2 -left-6 -translate-y-1/2 text-[10px] text-muted-foreground font-semibold"
+            style={{ writingMode: "vertical-rl", transform: "rotate(180deg) translateX(50%)" }}
+          >
+            ← {sh} cm →
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
 
 const MDFCutCalculator = () => {
@@ -180,9 +379,7 @@ const MDFCutCalculator = () => {
   const stats = useMemo(() => {
     if (!result || !hasSheet) return null;
     const sheetArea = sw * sh;
-    const usedArea = result.placed.reduce((sum, p) => {
-      return sum + p.piece.width * p.piece.height;
-    }, 0);
+    const usedArea = result.placed.reduce((sum, p) => sum + p.piece.width * p.piece.height, 0);
     const wasteArea = sheetArea - usedArea;
     const wastePercent = (wasteArea / sheetArea) * 100;
     const totalPieces = validPieces.reduce((s, p) => s + p.quantity, 0);
@@ -191,7 +388,6 @@ const MDFCutCalculator = () => {
 
   const hasResults = result !== null && stats !== null;
 
-  // Visual scale - responsive
   const maxVisualWidth = 360;
   const scale = hasSheet ? Math.min(maxVisualWidth / sw, 500 / sh) : 1;
 
@@ -203,36 +399,17 @@ const MDFCutCalculator = () => {
           <Grid3X3 className="w-5 h-5 text-primary" />
           Chapa de MDF
         </h2>
-
         <div className="grid grid-cols-2 gap-4 mb-2">
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-2">
-              Largura da Chapa (cm)
-            </label>
-            <input
-              type="number"
-              value={sheetWidth}
-              onChange={(e) => setSheetWidth(e.target.value)}
-              placeholder="275"
-              className="input-wood w-full"
-            />
+            <label className="block text-sm font-medium text-muted-foreground mb-2">Largura (cm)</label>
+            <input type="number" value={sheetWidth} onChange={(e) => setSheetWidth(e.target.value)} placeholder="275" className="input-wood w-full" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-muted-foreground mb-2">
-              Altura da Chapa (cm)
-            </label>
-            <input
-              type="number"
-              value={sheetHeight}
-              onChange={(e) => setSheetHeight(e.target.value)}
-              placeholder="185"
-              className="input-wood w-full"
-            />
+            <label className="block text-sm font-medium text-muted-foreground mb-2">Altura (cm)</label>
+            <input type="number" value={sheetHeight} onChange={(e) => setSheetHeight(e.target.value)} placeholder="185" className="input-wood w-full" />
           </div>
         </div>
-        <p className="text-xs text-muted-foreground text-center">
-          Padrão: 275 × 185 cm
-        </p>
+        <p className="text-xs text-muted-foreground text-center">Padrão: 275 × 185 cm</p>
       </div>
 
       {/* Pieces list */}
@@ -241,76 +418,34 @@ const MDFCutCalculator = () => {
           <Ruler className="w-5 h-5 text-primary" />
           Peças para Cortar
         </h2>
-
         <div className="space-y-4">
           {pieces.map((piece, idx) => (
-            <div
-              key={piece.id}
-              className="p-4 bg-secondary/30 rounded-2xl border border-border/30 space-y-3"
-            >
+            <div key={piece.id} className="p-4 bg-secondary/30 rounded-2xl border border-border/30 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: getColor(piece.id, pieces) }}
-                  />
-                  <span className="text-sm font-semibold text-foreground">
-                    Peça {idx + 1}
-                  </span>
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: getColor(piece.id, pieces) }} />
+                  <span className="text-sm font-semibold text-foreground">Peça {idx + 1}</span>
                 </div>
                 {pieces.length > 1 && (
-                  <button
-                    onClick={() => removePiece(piece.id)}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
-                  >
+                  <button onClick={() => removePiece(piece.id)} className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 )}
               </div>
-
               <div>
-                <input
-                  type="text"
-                  value={piece.label}
-                  onChange={(e) => updatePiece(piece.id, "label", e.target.value)}
-                  placeholder="Nome da peça (opcional)"
-                  className="input-wood w-full !py-2 text-sm"
-                />
+                <input type="text" value={piece.label} onChange={(e) => updatePiece(piece.id, "label", e.target.value)} placeholder="Nome da peça (opcional)" className="input-wood w-full !py-2 text-sm" />
               </div>
-
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">
-                    Largura (cm)
-                  </label>
-                  <input
-                    type="number"
-                    value={piece.width || ""}
-                    onChange={(e) =>
-                      updatePiece(piece.id, "width", parseFloat(e.target.value) || 0)
-                    }
-                    placeholder="0"
-                    className="input-wood w-full !py-2 text-sm"
-                  />
+                  <label className="block text-xs text-muted-foreground mb-1">Largura (cm)</label>
+                  <input type="number" value={piece.width || ""} onChange={(e) => updatePiece(piece.id, "width", parseFloat(e.target.value) || 0)} placeholder="0" className="input-wood w-full !py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">
-                    Altura (cm)
-                  </label>
-                  <input
-                    type="number"
-                    value={piece.height || ""}
-                    onChange={(e) =>
-                      updatePiece(piece.id, "height", parseFloat(e.target.value) || 0)
-                    }
-                    placeholder="0"
-                    className="input-wood w-full !py-2 text-sm"
-                  />
+                  <label className="block text-xs text-muted-foreground mb-1">Altura (cm)</label>
+                  <input type="number" value={piece.height || ""} onChange={(e) => updatePiece(piece.id, "height", parseFloat(e.target.value) || 0)} placeholder="0" className="input-wood w-full !py-2 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs text-muted-foreground mb-1">
-                    Qtd
-                  </label>
+                  <label className="block text-xs text-muted-foreground mb-1">Qtd</label>
                   <input
                     type="number"
                     min={1}
@@ -318,15 +453,11 @@ const MDFCutCalculator = () => {
                     onChange={(e) => {
                       const raw = e.target.value;
                       const num = parseInt(raw) || 0;
-                      setPieces(prev => prev.map(p =>
-                        p.id === piece.id ? { ...p, qtyStr: raw, quantity: Math.max(0, num) } : p
-                      ));
+                      setPieces(prev => prev.map(p => p.id === piece.id ? { ...p, qtyStr: raw, quantity: Math.max(0, num) } : p));
                     }}
                     onBlur={() => {
                       if (!piece.qtyStr || piece.quantity < 1) {
-                        setPieces(prev => prev.map(p =>
-                          p.id === piece.id ? { ...p, qtyStr: "1", quantity: 1 } : p
-                        ));
+                        setPieces(prev => prev.map(p => p.id === piece.id ? { ...p, qtyStr: "1", quantity: 1 } : p));
                       }
                     }}
                     className="input-wood w-full !py-2 text-sm"
@@ -336,12 +467,7 @@ const MDFCutCalculator = () => {
             </div>
           ))}
         </div>
-
-        <button
-          onClick={addPiece}
-          className="mt-4 w-full py-3 rounded-2xl border-2 border-dashed border-primary/40 text-primary font-semibold
-                     hover:bg-primary/5 hover:border-primary/60 transition-all flex items-center justify-center gap-2"
-        >
+        <button onClick={addPiece} className="mt-4 w-full py-3 rounded-2xl border-2 border-dashed border-primary/40 text-primary font-semibold hover:bg-primary/5 hover:border-primary/60 transition-all flex items-center justify-center gap-2">
           <Plus className="w-5 h-5" />
           Adicionar Peça
         </button>
@@ -363,9 +489,7 @@ const MDFCutCalculator = () => {
             </div>
             <div className="p-3 bg-secondary/30 rounded-xl text-center">
               <p className="text-xs text-muted-foreground">Aproveitamento</p>
-              <p className="text-lg font-bold text-primary">
-                {(100 - stats.wastePercent).toFixed(1)}%
-              </p>
+              <p className="text-lg font-bold text-primary">{(100 - stats.wastePercent).toFixed(1)}%</p>
             </div>
             <div className="p-3 bg-secondary/30 rounded-xl text-center">
               <p className="text-xs text-muted-foreground">Desperdício</p>
@@ -375,17 +499,12 @@ const MDFCutCalculator = () => {
             </div>
           </div>
 
-          {/* Overflow warning */}
           {result.overflow.length > 0 && (
             <div className="p-4 bg-destructive/10 rounded-2xl border border-destructive/30 mb-4 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold text-destructive">
-                  {result.overflow.length} peça(s) não couberam na chapa!
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Essas peças excedem o tamanho da chapa ou não há espaço suficiente. Considere usar outra chapa.
-                </p>
+                <p className="text-sm font-semibold text-destructive">{result.overflow.length} peça(s) não couberam!</p>
+                <p className="text-xs text-muted-foreground mt-1">Considere usar outra chapa.</p>
                 <ul className="mt-2 space-y-1">
                   {result.overflow.map((o, i) => (
                     <li key={i} className="text-xs text-destructive">
@@ -400,89 +519,35 @@ const MDFCutCalculator = () => {
           {result.placed.length > 0 && result.overflow.length === 0 && (
             <div className="p-3 bg-primary/10 rounded-2xl border border-primary/30 mb-4 flex items-center gap-2">
               <CheckCircle className="w-5 h-5 text-primary" />
-              <p className="text-sm font-semibold text-primary">
-                Todas as peças cabem na chapa!
-              </p>
+              <p className="text-sm font-semibold text-primary">Todas as peças cabem na chapa!</p>
             </div>
           )}
 
           {/* Visual distribution */}
           <div className="mb-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              📐 Distribuição Visual — Corte na Serra de Mesa
+            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+              📐 Distribuição Visual — Serra de Mesa
             </h3>
+            <p className="text-[10px] text-muted-foreground mb-3">
+              <span className="inline-block w-3 h-0 border-t-2 border-dashed border-destructive align-middle mr-1" />
+              Linhas vermelhas tracejadas = onde cortar
+            </p>
             <div className="flex justify-center overflow-x-auto pb-6 pt-2 pl-8">
-              <div
-                className="relative border-2 border-foreground/40 bg-secondary/10"
-                style={{
-                  width: sw * scale,
-                  height: sh * scale,
-                }}
-              >
-                {/* Grid lines every 50cm */}
-                <div className="absolute inset-0 opacity-[0.07]"
-                  style={{
-                    backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
-                    backgroundSize: `${50 * scale}px ${50 * scale}px`,
-                  }}
-                />
-
-                {result.placed.map((p, i) => {
-                  const pw = p.rotated ? p.piece.height : p.piece.width;
-                  const ph = p.rotated ? p.piece.width : p.piece.height;
-                  const color = getColor(p.piece.id, validPieces);
-                  const pieceIdx = pieces.findIndex((pc) => pc.id === p.piece.id) + 1;
-                  const pxW = pw * scale;
-                  const pxH = ph * scale;
-                  const showLabel = pxW > 20 && pxH > 14;
-                  const showDims = pxW > 36 && pxH > 28;
-
-                  return (
-                    <div
-                      key={i}
-                      className="absolute border border-foreground/30 flex flex-col items-center justify-center overflow-hidden"
-                      style={{
-                        left: p.x * scale,
-                        top: p.y * scale,
-                        width: pxW,
-                        height: pxH,
-                        backgroundColor: color,
-                        opacity: 0.85,
-                      }}
-                      title={`${p.piece.label || `Peça ${pieceIdx}`}: ${pw}×${ph} cm${p.rotated ? " (girada)" : ""}`}
-                    >
-                      {showLabel && (
-                        <span className="text-[8px] md:text-[10px] font-bold text-white drop-shadow-md leading-none">
-                          {p.piece.label || `P${pieceIdx}`}
-                          {p.rotated && " ↻"}
-                        </span>
-                      )}
-                      {showDims && (
-                        <span className="text-[7px] md:text-[9px] text-white/90 drop-shadow-md leading-none mt-0.5">
-                          {pw}×{ph}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {/* Dimension labels */}
-                <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground font-semibold whitespace-nowrap">
-                  ← {sw} cm →
-                </div>
-                <div className="absolute top-1/2 -left-6 -translate-y-1/2 text-[10px] text-muted-foreground font-semibold"
-                  style={{ writingMode: "vertical-rl", transform: "rotate(180deg) translateX(50%)" }}>
-                  ← {sh} cm →
-                </div>
-              </div>
+              <VisualCutMap
+                placed={result.placed}
+                cutLines={result.cutLines}
+                sw={sw}
+                sh={sh}
+                scale={scale}
+                pieces={pieces}
+                validPieces={validPieces}
+              />
             </div>
           </div>
 
-          {/* Cut list with exact measurements */}
+          {/* Cut list */}
           <div className="mb-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">
-              📏 Lista de Cortes (Serra de Mesa)
-            </h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">📏 Lista de Cortes</h3>
             <div className="space-y-1.5">
               {result.placed.map((p, i) => {
                 const pw = p.rotated ? p.piece.height : p.piece.width;
@@ -492,18 +557,10 @@ const MDFCutCalculator = () => {
                 return (
                   <div key={i} className="flex items-center gap-2 p-2 bg-secondary/20 rounded-lg text-xs">
                     <div className="w-3 h-3 rounded-sm shrink-0" style={{ backgroundColor: color, opacity: 0.85 }} />
-                    <span className="font-semibold text-foreground min-w-[60px]">
-                      {p.piece.label || `Peça ${pieceIdx}`}
-                    </span>
-                    <span className="text-primary font-bold">
-                      {pw} × {ph} cm
-                    </span>
-                    {p.rotated && (
-                      <span className="text-muted-foreground text-[10px]">(girada 90°)</span>
-                    )}
-                    <span className="text-muted-foreground ml-auto text-[10px]">
-                      pos: {p.x},{p.y}
-                    </span>
+                    <span className="font-semibold text-foreground min-w-[60px]">{p.piece.label || `Peça ${pieceIdx}`}</span>
+                    <span className="text-primary font-bold">{pw} × {ph} cm</span>
+                    {p.rotated && <span className="text-muted-foreground text-[10px]">(girada 90°)</span>}
+                    <span className="text-muted-foreground ml-auto text-[10px]">pos: {p.x},{p.y}</span>
                   </div>
                 );
               })}
@@ -515,20 +572,10 @@ const MDFCutCalculator = () => {
             <h3 className="text-sm font-medium text-muted-foreground">Legenda</h3>
             <div className="grid grid-cols-1 gap-2">
               {validPieces.map((piece, idx) => (
-                <div
-                  key={piece.id}
-                  className="flex items-center gap-3 p-2 bg-secondary/20 rounded-xl text-sm"
-                >
-                  <div
-                    className="w-5 h-5 rounded shrink-0"
-                    style={{ backgroundColor: getColor(piece.id, validPieces), opacity: 0.8 }}
-                  />
-                  <span className="font-medium text-foreground">
-                    {piece.label || `Peça ${idx + 1}`}
-                  </span>
-                  <span className="text-muted-foreground ml-auto">
-                    {piece.width} × {piece.height} cm × {piece.quantity}
-                  </span>
+                <div key={piece.id} className="flex items-center gap-3 p-2 bg-secondary/20 rounded-xl text-sm">
+                  <div className="w-5 h-5 rounded shrink-0" style={{ backgroundColor: getColor(piece.id, validPieces), opacity: 0.8 }} />
+                  <span className="font-medium text-foreground">{piece.label || `Peça ${idx + 1}`}</span>
+                  <span className="text-muted-foreground ml-auto">{piece.width} × {piece.height} cm × {piece.quantity}</span>
                 </div>
               ))}
             </div>
@@ -564,46 +611,31 @@ const MDFCutCalculator = () => {
                   {validPieces.map((p, i) => (
                     <div key={p.id} className="bg-amber-500/20 rounded-lg p-2 flex justify-between">
                       <span className="text-white text-sm">{p.label || `Peça ${i + 1}`}</span>
-                      <span className="text-amber-400 font-bold text-sm">
-                        {p.width}×{p.height} cm ×{p.quantity}
-                      </span>
+                      <span className="text-amber-400 font-bold text-sm">{p.width}×{p.height} cm ×{p.quantity}</span>
                     </div>
                   ))}
                 </div>
               </div>
-              {/* Visual Distribution in download */}
+              {/* Visual in download */}
               <div className="border-t border-white/20 pt-3 mt-2">
-                <p className="text-amber-400 font-semibold mb-2">Distribuição Visual:</p>
-                <div className="relative bg-white/5 rounded border border-white/20"
-                  style={{ width: '100%', aspectRatio: `${sw}/${sh}` }}>
-                  {result.placed.map((p, i) => {
-                    const pw = p.rotated ? p.piece.height : p.piece.width;
-                    const ph = p.rotated ? p.piece.width : p.piece.height;
-                    const color = getColor(p.piece.id, validPieces);
-                    const pieceIdx = pieces.findIndex((pc) => pc.id === p.piece.id) + 1;
-                    return (
-                      <div key={i} className="absolute border border-white/20 flex items-center justify-center"
-                        style={{
-                          left: `${(p.x / sw) * 100}%`,
-                          top: `${(p.y / sh) * 100}%`,
-                          width: `${(pw / sw) * 100}%`,
-                          height: `${(ph / sh) * 100}%`,
-                          backgroundColor: color,
-                          opacity: 0.8,
-                        }}>
-                        <span className="text-[8px] text-white font-bold drop-shadow">
-                          {p.piece.label || `P${pieceIdx}`} {pw}×{ph}
-                        </span>
-                      </div>
-                    );
-                  })}
+                <p className="text-amber-400 font-semibold mb-1">Distribuição Visual:</p>
+                <p className="text-white/50 text-[10px] mb-2">Linhas vermelhas tracejadas = cortes</p>
+                <div className="flex justify-center">
+                  <VisualCutMap
+                    placed={result.placed}
+                    cutLines={result.cutLines}
+                    sw={sw}
+                    sh={sh}
+                    scale={Math.min(620 / sw, 400 / sh)}
+                    pieces={pieces}
+                    validPieces={validPieces}
+                    forDownload
+                  />
                 </div>
               </div>
               {result.overflow.length > 0 && (
                 <div className="bg-red-500/20 rounded-lg p-3">
-                  <p className="text-red-400 font-semibold text-sm">
-                    ⚠️ {result.overflow.length} peça(s) não couberam!
-                  </p>
+                  <p className="text-red-400 font-semibold text-sm">⚠️ {result.overflow.length} peça(s) não couberam!</p>
                 </div>
               )}
             </div>
