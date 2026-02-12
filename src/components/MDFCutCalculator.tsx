@@ -199,7 +199,6 @@ const deduplicateLines = (lines: CutLine[]): CutLine[] => {
 
 const VisualCutMap = ({
   placed,
-  cutLines,
   sw,
   sh,
   scale,
@@ -208,7 +207,6 @@ const VisualCutMap = ({
   forDownload = false,
 }: {
   placed: PlacedPiece[];
-  cutLines: CutLine[];
   sw: number;
   sh: number;
   scale: number;
@@ -216,9 +214,8 @@ const VisualCutMap = ({
   validPieces: CutPiece[];
   forDownload?: boolean;
 }) => {
-  const uniqueLines = deduplicateLines(cutLines);
-  const lineColor = forDownload ? "rgba(255,60,60,0.7)" : "hsl(0, 80%, 55%)";
-  const lineWidth = forDownload ? 1.5 : 2;
+  const borderCol = forDownload ? "rgba(255,255,255,0.6)" : "hsl(var(--foreground) / 0.5)";
+  const bgCol = forDownload ? "rgba(200,180,150,0.15)" : "hsl(var(--secondary) / 0.15)";
 
   return (
     <div
@@ -226,25 +223,29 @@ const VisualCutMap = ({
       style={{
         width: sw * scale,
         height: sh * scale,
-        border: forDownload ? "2px solid rgba(255,255,255,0.4)" : undefined,
-        borderWidth: forDownload ? undefined : 2,
-        borderStyle: forDownload ? undefined : "solid",
-        borderColor: forDownload ? undefined : "hsl(var(--foreground) / 0.4)",
-        background: forDownload ? "rgba(255,255,255,0.05)" : "hsl(var(--secondary) / 0.1)",
+        border: `2px solid ${borderCol}`,
+        background: bgCol,
       }}
     >
-      {/* Grid every 50cm */}
-      {!forDownload && (
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage: `linear-gradient(hsl(var(--foreground)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground)) 1px, transparent 1px)`,
-            backgroundSize: `${50 * scale}px ${50 * scale}px`,
-          }}
-        />
-      )}
+      {/* Background - MDF color */}
+      <div className="absolute inset-0" style={{
+        background: forDownload
+          ? "linear-gradient(135deg, rgba(210,180,140,0.2), rgba(180,150,110,0.15))"
+          : "linear-gradient(135deg, hsl(30 30% 75% / 0.15), hsl(30 20% 60% / 0.1))",
+      }} />
 
-      {/* Placed pieces */}
+      {/* Grid every 50cm */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: forDownload
+            ? `linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)`
+            : `linear-gradient(hsl(var(--foreground) / 0.06) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--foreground) / 0.06) 1px, transparent 1px)`,
+          backgroundSize: `${50 * scale}px ${50 * scale}px`,
+        }}
+      />
+
+      {/* Placed pieces with solid borders */}
       {placed.map((p, i) => {
         const pw = p.rotated ? p.piece.height : p.piece.width;
         const ph = p.rotated ? p.piece.width : p.piece.height;
@@ -252,29 +253,31 @@ const VisualCutMap = ({
         const pieceIdx = pieces.findIndex((pc) => pc.id === p.piece.id) + 1;
         const pxW = pw * scale;
         const pxH = ph * scale;
-        const showLabel = pxW > 18 && pxH > 12;
-        const showDims = pxW > 32 && pxH > 24;
+        const showLabel = pxW > 20 && pxH > 14;
+        const showDims = pxW > 35 && pxH > 26;
 
         return (
           <div
             key={i}
-            className="absolute flex flex-col items-center justify-center overflow-hidden"
+            className="absolute flex flex-col items-center justify-center"
             style={{
               left: p.x * scale,
               top: p.y * scale,
               width: pxW,
               height: pxH,
               backgroundColor: color,
-              opacity: 0.85,
+              border: forDownload ? "1.5px solid rgba(255,255,255,0.5)" : "1.5px solid hsl(var(--foreground) / 0.35)",
+              boxSizing: "border-box",
             }}
             title={`${p.piece.label || `Peça ${pieceIdx}`}: ${pw}×${ph} cm${p.rotated ? " (girada)" : ""}`}
           >
             {showLabel && (
               <span
-                className="font-bold drop-shadow-md leading-none"
+                className="font-bold leading-none text-center"
                 style={{
-                  fontSize: forDownload ? 10 : Math.min(10, pxW / 6),
+                  fontSize: Math.max(7, Math.min(11, pxW / 5)),
                   color: "white",
+                  textShadow: "0 1px 3px rgba(0,0,0,0.7)",
                 }}
               >
                 {p.piece.label || `P${pieceIdx}`}
@@ -283,10 +286,11 @@ const VisualCutMap = ({
             )}
             {showDims && (
               <span
-                className="drop-shadow-md leading-none mt-0.5"
+                className="leading-none mt-0.5 text-center"
                 style={{
-                  fontSize: forDownload ? 9 : Math.min(9, pxW / 7),
+                  fontSize: Math.max(6, Math.min(9, pxW / 6)),
                   color: "rgba(255,255,255,0.9)",
+                  textShadow: "0 1px 2px rgba(0,0,0,0.6)",
                 }}
               >
                 {pw}×{ph}
@@ -296,40 +300,28 @@ const VisualCutMap = ({
         );
       })}
 
-      {/* Cut lines - red dashed lines showing where to cut */}
-      <svg
-        className="absolute inset-0 pointer-events-none"
-        width={sw * scale}
-        height={sh * scale}
-        style={{ overflow: "visible" }}
-      >
-        {uniqueLines.map((line, i) => (
-          <line
-            key={i}
-            x1={line.x1 * scale}
-            y1={line.y1 * scale}
-            x2={line.x2 * scale}
-            y2={line.y2 * scale}
-            stroke={lineColor}
-            strokeWidth={lineWidth}
-            strokeDasharray="6,3"
-            opacity={0.8}
-          />
-        ))}
-      </svg>
-
       {/* Dimension labels */}
       {!forDownload && (
         <>
-          <div
-            className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground font-semibold whitespace-nowrap"
-          >
+          <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground font-semibold whitespace-nowrap">
             ← {sw} cm →
           </div>
           <div
             className="absolute top-1/2 -left-6 -translate-y-1/2 text-[10px] text-muted-foreground font-semibold"
             style={{ writingMode: "vertical-rl", transform: "rotate(180deg) translateX(50%)" }}
           >
+            ← {sh} cm →
+          </div>
+        </>
+      )}
+
+      {/* Download-only labels */}
+      {forDownload && (
+        <>
+          <div style={{ position: "absolute", bottom: -18, left: "50%", transform: "translateX(-50%)", fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600, whiteSpace: "nowrap" }}>
+            ← {sw} cm →
+          </div>
+          <div style={{ position: "absolute", top: "50%", left: -18, transform: "rotate(180deg) translateX(50%)", writingMode: "vertical-rl" as const, fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>
             ← {sh} cm →
           </div>
         </>
@@ -529,13 +521,11 @@ const MDFCutCalculator = () => {
               📐 Distribuição Visual — Serra de Mesa
             </h3>
             <p className="text-[10px] text-muted-foreground mb-3">
-              <span className="inline-block w-3 h-0 border-t-2 border-dashed border-destructive align-middle mr-1" />
-              Linhas vermelhas tracejadas = onde cortar
+              As bordas entre as peças indicam onde cortar
             </p>
             <div className="flex justify-center overflow-x-auto pb-6 pt-2 pl-8">
               <VisualCutMap
                 placed={result.placed}
-                cutLines={result.cutLines}
                 sw={sw}
                 sh={sh}
                 scale={scale}
@@ -619,11 +609,10 @@ const MDFCutCalculator = () => {
               {/* Visual in download */}
               <div className="border-t border-white/20 pt-3 mt-2">
                 <p className="text-amber-400 font-semibold mb-1">Distribuição Visual:</p>
-                <p className="text-white/50 text-[10px] mb-2">Linhas vermelhas tracejadas = cortes</p>
+                <p className="text-white/50 text-[10px] mb-2">Bordas indicam os cortes</p>
                 <div className="flex justify-center">
                   <VisualCutMap
                     placed={result.placed}
-                    cutLines={result.cutLines}
                     sw={sw}
                     sh={sh}
                     scale={Math.min(620 / sw, 400 / sh)}
