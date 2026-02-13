@@ -34,16 +34,24 @@ interface CutLine {
   y2: number;
 }
 
-// Guillotine bin packing with multiple strategies - picks best result
+// Guillotine bin packing — optimized for table saw (straight cuts only)
+// Uses Best Area Fit + smart split to maximize sheet utilization
 const packWithStrategy = (
   expanded: { piece: CutPiece; index: number }[],
   sheetW: number,
-  sheetH: number
+  sheetH: number,
+  splitMode: "longer" | "shorter" | "area" | "horizontal" | "vertical" = "longer"
 ): { placed: PlacedPiece[]; overflow: PlacedPiece[]; cutLines: CutLine[] } => {
   const freeRects: FreeRect[] = [{ x: 0, y: 0, w: sheetW, h: sheetH }];
   const placed: PlacedPiece[] = [];
   const overflow: PlacedPiece[] = [];
   const cutLines: CutLine[] = [];
+
+  const tryFit = (pw: number, ph: number, rect: FreeRect): number => {
+    if (pw > rect.w || ph > rect.h) return Infinity;
+    // Best Short Side Fit: minimize the shortest leftover side
+    return Math.min(rect.w - pw, rect.h - ph);
+  };
 
   for (const { piece, index } of expanded) {
     let bestRectIdx = -1;
@@ -53,24 +61,20 @@ const packWithStrategy = (
     for (let ri = 0; ri < freeRects.length; ri++) {
       const rect = freeRects[ri];
 
-      // Normal
-      if (piece.width <= rect.w && piece.height <= rect.h) {
-        const score = Math.min(rect.w - piece.width, rect.h - piece.height);
-        if (score < bestScore) {
-          bestScore = score;
-          bestRectIdx = ri;
-          bestRotated = false;
-        }
+      // Normal orientation
+      const scoreN = tryFit(piece.width, piece.height, rect);
+      if (scoreN < bestScore) {
+        bestScore = scoreN;
+        bestRectIdx = ri;
+        bestRotated = false;
       }
 
-      // Rotated
-      if (piece.height <= rect.w && piece.width <= rect.h) {
-        const score = Math.min(rect.w - piece.height, rect.h - piece.width);
-        if (score < bestScore) {
-          bestScore = score;
-          bestRectIdx = ri;
-          bestRotated = true;
-        }
+      // Rotated 90°
+      const scoreR = tryFit(piece.height, piece.width, rect);
+      if (scoreR < bestScore) {
+        bestScore = scoreR;
+        bestRectIdx = ri;
+        bestRotated = true;
       }
     }
 
@@ -85,41 +89,72 @@ const packWithStrategy = (
 
     placed.push({ piece, x: rect.x, y: rect.y, rotated: bestRotated, index });
 
-    // Record cut lines (full straight cuts for table saw)
     const rightW = rect.w - pw;
     const bottomH = rect.h - ph;
 
     freeRects.splice(bestRectIdx, 1);
 
-    if (rightW > 0 && bottomH > 0) {
-      if (rightW <= bottomH) {
-        // Horizontal split: cut horizontally across full width of rect
-        cutLines.push({ x1: rect.x, y1: rect.y + ph, x2: rect.x + rect.w, y2: rect.y + ph });
-        if (rightW > 0) {
-          // Vertical cut on top strip
-          cutLines.push({ x1: rect.x + pw, y1: rect.y, x2: rect.x + pw, y2: rect.y + ph });
-          freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: ph });
+    // Decide split direction based on mode — always straight cuts
+    let splitHorizontally: boolean;
+    if (rightW <= 0 && bottomH <= 0) {
+      continue; // Perfect fit
+    } else if (rightW <= 0) {
+      splitHorizontally = true;
+    } else if (bottomH <= 0) {
+      splitHorizontally = false;
+    } else {
+      // Choose split to maximize the larger remaining rectangle
+      switch (splitMode) {
+        case "horizontal":
+          splitHorizontally = true;
+          break;
+        case "vertical":
+          splitHorizontally = false;
+          break;
+        case "shorter":
+          // Split along shorter remainder → keeps bigger piece intact
+          splitHorizontally = bottomH <= rightW;
+          break;
+        case "area": {
+          // Split to maximize the area of the larger remaining piece
+          const hArea = Math.max(rect.w * bottomH, rightW * ph);
+          const vArea = Math.max(pw * bottomH, rightW * rect.h);
+          splitHorizontally = hArea >= vArea;
+          break;
         }
-        freeRects.push({ x: rect.x, y: rect.y + ph, w: rect.w, h: bottomH });
-      } else {
-        // Vertical split: cut vertically across full height of rect
-        cutLines.push({ x1: rect.x + pw, y1: rect.y, x2: rect.x + pw, y2: rect.y + rect.h });
-        if (bottomH > 0) {
-          // Horizontal cut on left strip
-          cutLines.push({ x1: rect.x, y1: rect.y + ph, x2: rect.x + pw, y2: rect.y + ph });
-          freeRects.push({ x: rect.x, y: rect.y + ph, w: pw, h: bottomH });
-        }
-        freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: rect.h });
+        case "longer":
+        default:
+          // Split along the longer side of the free rect → keeps long strips
+          splitHorizontally = rect.w >= rect.h;
+          break;
       }
-    } else if (rightW > 0) {
-      cutLines.push({ x1: rect.x + pw, y1: rect.y, x2: rect.x + pw, y2: rect.y + rect.h });
-      freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: rect.h });
-    } else if (bottomH > 0) {
-      cutLines.push({ x1: rect.x, y1: rect.y + ph, x2: rect.x + rect.w, y2: rect.y + ph });
-      freeRects.push({ x: rect.x, y: rect.y + ph, w: rect.w, h: bottomH });
     }
 
-    // Sort free rects: prefer smaller ones for tighter fit
+    if (splitHorizontally) {
+      // Horizontal cut across full width at y + ph
+      cutLines.push({ x1: rect.x, y1: rect.y + ph, x2: rect.x + rect.w, y2: rect.y + ph });
+      if (rightW > 0) {
+        // Vertical cut in the top strip
+        cutLines.push({ x1: rect.x + pw, y1: rect.y, x2: rect.x + pw, y2: rect.y + ph });
+        freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: ph });
+      }
+      if (bottomH > 0) {
+        freeRects.push({ x: rect.x, y: rect.y + ph, w: rect.w, h: bottomH });
+      }
+    } else {
+      // Vertical cut across full height at x + pw
+      cutLines.push({ x1: rect.x + pw, y1: rect.y, x2: rect.x + pw, y2: rect.y + rect.h });
+      if (bottomH > 0) {
+        // Horizontal cut in the left strip
+        cutLines.push({ x1: rect.x, y1: rect.y + ph, x2: rect.x + pw, y2: rect.y + ph });
+        freeRects.push({ x: rect.x, y: rect.y + ph, w: pw, h: bottomH });
+      }
+      if (rightW > 0) {
+        freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: rect.h });
+      }
+    }
+
+    // Sort free rects: prefer smaller areas for tighter packing
     freeRects.sort((a, b) => a.w * a.h - b.w * b.h);
   }
 
@@ -138,32 +173,51 @@ const packPieces = (
     }
   });
 
-  // Try multiple sorting strategies, pick best
-  const strategies: ((a: { piece: CutPiece }, b: { piece: CutPiece }) => number)[] = [
-    // Area descending
-    (a, b) => b.piece.width * b.piece.height - a.piece.width * a.piece.height,
-    // Max side descending
-    (a, b) => Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height),
-    // Height descending
-    (a, b) => b.piece.height - a.piece.height || b.piece.width - a.piece.width,
-    // Width descending
-    (a, b) => b.piece.width - a.piece.width || b.piece.height - a.piece.height,
-    // Perimeter descending
-    (a, b) => (b.piece.width + b.piece.height) - (a.piece.width + a.piece.height),
+  // Sorting strategies
+  const sortStrategies: ((a: { piece: CutPiece }, b: { piece: CutPiece }) => number)[] = [
+    (a, b) => b.piece.width * b.piece.height - a.piece.width * a.piece.height, // Area
+    (a, b) => Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height), // Max side
+    (a, b) => b.piece.height - a.piece.height || b.piece.width - a.piece.width, // Height
+    (a, b) => b.piece.width - a.piece.width || b.piece.height - a.piece.height, // Width
+    (a, b) => (b.piece.width + b.piece.height) - (a.piece.width + a.piece.height), // Perimeter
+  ];
+
+  // Split modes to try
+  const splitModes: ("longer" | "shorter" | "area" | "horizontal" | "vertical")[] = [
+    "longer", "shorter", "area", "horizontal", "vertical",
   ];
 
   let bestResult: ReturnType<typeof packWithStrategy> | null = null;
-  let bestUsed = -1;
+  let bestScore = -1;
 
-  for (const sortFn of strategies) {
+  // Try all combinations of sort × split × orientation
+  for (const sortFn of sortStrategies) {
     const sorted = [...expanded].sort(sortFn);
-    const res = packWithStrategy(sorted, sheetW, sheetH);
-    const usedArea = res.placed.reduce((s, p) => s + p.piece.width * p.piece.height, 0);
-    // Prefer: fewer overflows, then more used area
-    const score = res.placed.length * 1000000 + usedArea;
-    if (score > bestUsed) {
-      bestUsed = score;
-      bestResult = res;
+    for (const splitMode of splitModes) {
+      // Try normal orientation
+      const res1 = packWithStrategy(sorted, sheetW, sheetH, splitMode);
+      const score1 = res1.placed.length * 1000000 + res1.placed.reduce((s, p) => s + p.piece.width * p.piece.height, 0);
+      if (score1 > bestScore) { bestScore = score1; bestResult = res1; }
+
+      // Try swapped sheet orientation (then remap coords back)
+      if (sheetW !== sheetH) {
+        const res2 = packWithStrategy(sorted, sheetH, sheetW, splitMode);
+        const score2 = res2.placed.length * 1000000 + res2.placed.reduce((s, p) => s + p.piece.width * p.piece.height, 0);
+        if (score2 > bestScore) {
+          bestScore = score2;
+          // Remap: swap x↔y coordinates and rotations so it fits original sheet
+          bestResult = {
+            placed: res2.placed.map(p => ({
+              ...p,
+              x: p.y,
+              y: p.x,
+              rotated: !p.rotated,
+            })),
+            overflow: res2.overflow,
+            cutLines: res2.cutLines.map(l => ({ x1: l.y1, y1: l.x1, x2: l.y2, y2: l.x2 })),
+          };
+        }
+      }
     }
   }
 
