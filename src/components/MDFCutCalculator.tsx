@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { Ruler, Plus, Trash2, AlertTriangle, CheckCircle, Grid3X3 } from "lucide-react";
+import { Ruler, Plus, Trash2, AlertTriangle, CheckCircle, Grid3X3, Scissors } from "lucide-react";
 import DownloadImageButton from "./DownloadImageButton";
 import SaveMeasurementButton from "./SaveMeasurementButton";
 
@@ -199,20 +199,24 @@ const deduplicateLines = (lines: CutLine[]): CutLine[] => {
 
 const VisualCutMap = ({
   placed,
+  cutLines,
   sw,
   sh,
   scale,
   pieces,
   validPieces,
   forDownload = false,
+  showCutLines = false,
 }: {
   placed: PlacedPiece[];
+  cutLines: CutLine[];
   sw: number;
   sh: number;
   scale: number;
   pieces: CutPiece[];
   validPieces: CutPiece[];
   forDownload?: boolean;
+  showCutLines?: boolean;
 }) => {
   const borderCol = forDownload ? "rgba(255,255,255,0.6)" : "hsl(var(--foreground) / 0.5)";
   const bgCol = forDownload ? "rgba(200,180,150,0.15)" : "hsl(var(--secondary) / 0.15)";
@@ -300,6 +304,30 @@ const VisualCutMap = ({
         );
       })}
 
+      {/* Red cut lines (SVG overlay) */}
+      {showCutLines && cutLines.length > 0 && (
+        <svg
+          className="absolute inset-0 pointer-events-none"
+          width={sw * scale}
+          height={sh * scale}
+          style={{ zIndex: 10 }}
+        >
+          {deduplicateLines(cutLines).map((line, i) => (
+            <line
+              key={i}
+              x1={line.x1 * scale}
+              y1={line.y1 * scale}
+              x2={line.x2 * scale}
+              y2={line.y2 * scale}
+              stroke="red"
+              strokeWidth={1.5}
+              strokeDasharray="6 3"
+              opacity={0.85}
+            />
+          ))}
+        </svg>
+      )}
+
       {/* Dimension labels */}
       {!forDownload && (
         <>
@@ -336,6 +364,7 @@ const MDFCutCalculator = () => {
   const [pieces, setPieces] = useState<CutPiece[]>([
     { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "", qtyStr: "1" },
   ]);
+  const [showCutLines, setShowCutLines] = useState(false);
 
   const addPiece = useCallback(() => {
     setPieces((prev) => [
@@ -517,20 +546,35 @@ const MDFCutCalculator = () => {
 
           {/* Visual distribution */}
           <div className="mb-4">
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
-              📐 Distribuição Visual — Serra de Mesa
-            </h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-muted-foreground">
+                📐 Distribuição Visual — Serra de Mesa
+              </h3>
+              <button
+                onClick={() => setShowCutLines((v) => !v)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  showCutLines
+                    ? "bg-destructive/15 text-destructive border border-destructive/30"
+                    : "bg-secondary/50 text-muted-foreground border border-border/50 hover:bg-secondary"
+                }`}
+              >
+                <Scissors className="w-3.5 h-3.5" />
+                {showCutLines ? "Linhas ON" : "Linhas OFF"}
+              </button>
+            </div>
             <p className="text-[10px] text-muted-foreground mb-3">
-              As bordas entre as peças indicam onde cortar
+              {showCutLines ? "Linhas vermelhas = cortes retos para serra de mesa" : "As bordas entre as peças indicam onde cortar"}
             </p>
             <div className="flex justify-center overflow-x-auto pb-6 pt-2 pl-8">
               <VisualCutMap
                 placed={result.placed}
+                cutLines={result.cutLines}
                 sw={sw}
                 sh={sh}
                 scale={scale}
                 pieces={pieces}
                 validPieces={validPieces}
+                showCutLines={showCutLines}
               />
             </div>
           </div>
@@ -613,12 +657,14 @@ const MDFCutCalculator = () => {
                 <div className="flex justify-center">
                   <VisualCutMap
                     placed={result.placed}
+                    cutLines={result.cutLines}
                     sw={sw}
                     sh={sh}
                     scale={Math.min(620 / sw, 400 / sh)}
                     pieces={pieces}
                     validPieces={validPieces}
                     forDownload
+                    showCutLines={showCutLines}
                   />
                 </div>
               </div>
