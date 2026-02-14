@@ -1,5 +1,6 @@
-import { ClipboardList, Trash2, X, ImageDown } from "lucide-react";
+import { ClipboardList, Trash2, X, ImageDown, Pencil } from "lucide-react";
 import { useSavedMeasurements } from "@/contexts/SavedMeasurementsContext";
+import { useAppActions, CalculatorType } from "@/contexts/AppActionsContext";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
@@ -50,6 +51,7 @@ const bannerToBase64 = (url: string): Promise<string> => {
 
 const SavedMeasurementsPanel = () => {
   const { measurements, removeMeasurement, clearMeasurements } = useSavedMeasurements();
+  const { editMeasurement } = useAppActions();
   const [isOpen, setIsOpen] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const captureRef = useRef<HTMLDivElement>(null);
@@ -159,12 +161,26 @@ const SavedMeasurementsPanel = () => {
                           </span>
                           <p className="text-sm font-semibold text-foreground mt-1">{m.label}</p>
                         </div>
-                        <button
-                          onClick={() => removeMeasurement(m.id)}
-                          className="p-1.5 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          {m.calculatorType && m.rawData && (
+                            <button
+                              onClick={() => {
+                                editMeasurement(m.calculatorType as CalculatorType, m.rawData!);
+                                setIsOpen(false);
+                              }}
+                              className="p-1.5 rounded-lg hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+                              title="Editar na calculadora"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => removeMeasurement(m.id)}
+                            className="p-1.5 rounded-lg hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                       <div className="space-y-1">
                         {m.results.map((r, i) => (

@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
-import { Ruler, Square, Layers, Package, Minus, Plus } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Ruler, Square, Layers, Package, Minus, Plus, Grid3X3 } from "lucide-react";
 import DownloadImageButton from "./DownloadImageButton";
 import SaveMeasurementButton from "./SaveMeasurementButton";
+import { useAppActions } from "@/contexts/AppActionsContext";
+import { toast } from "sonner";
 
 type SlideType = "oculta" | "telescopica";
 
@@ -21,6 +23,24 @@ const ShoerackCalculator = () => {
   const [quantidadeSapateiras, setQuantidadeSapateiras] = useState<number>(1);
   const [alturaLateralFixa, setAlturaLateralFixa] = useState<string>("6");
 
+  const { sendToMDF, pendingEdit, clearPendingEdit } = useAppActions();
+
+  // Load edit data
+  useEffect(() => {
+    if (pendingEdit && pendingEdit.calculatorType === "sapateira") {
+      const d = pendingEdit.rawData;
+      if (d.vaoLargura !== undefined) setVaoLargura(String(d.vaoLargura));
+      if (d.vaoAltura !== undefined) setVaoAltura(String(d.vaoAltura));
+      if (d.profundidade !== undefined) setProfundidade(String(d.profundidade));
+      if (d.tamanhoCorre !== undefined) setTamanhoCorre(d.tamanhoCorre);
+      if (d.slideType !== undefined) setSlideType(d.slideType);
+      if (d.quantidadeSapateiras !== undefined) setQuantidadeSapateiras(d.quantidadeSapateiras);
+      if (d.alturaLateralFixa !== undefined) setAlturaLateralFixa(String(d.alturaLateralFixa));
+      clearPendingEdit();
+      toast.success("Medida carregada para edição!");
+    }
+  }, [pendingEdit, clearPendingEdit]);
+
   const measurements = useMemo<ShoerackMeasurements | null>(() => {
     const largura = parseFloat(vaoLargura);
     const alturaLateral = parseFloat(alturaLateralFixa);
@@ -29,13 +49,8 @@ const ShoerackCalculator = () => {
       return null;
     }
 
-    // Desconto da largura baseado no tipo de corrediça
     const desconto = slideType === "oculta" ? 4 : 5.7;
-
-    // Altura da frente/traseira: altura lateral - 2cm
     const alturaFrenteTraseira = alturaLateral - 2;
-
-    // Largura da frente/traseira: largura do vão - desconto
     const larguraFrenteTraseira = largura - desconto;
 
     return {
@@ -54,9 +69,22 @@ const ShoerackCalculator = () => {
 
   const hasResults = measurements !== null;
 
+  const handleSendToMDF = () => {
+    if (!measurements) return;
+    const pieces = [
+      { width: parseFloat(measurements.frontBack.width.toFixed(1)), height: parseFloat(measurements.frontBack.height.toFixed(1)), quantity: measurements.frontBack.quantity, label: "Frente/Traseira" },
+      { width: measurements.side.width, height: parseFloat(measurements.side.height.toFixed(1)), quantity: measurements.side.quantity, label: "Lateral" },
+    ];
+    sendToMDF(pieces);
+    toast.success("Peças enviadas para Cortes de MDF!");
+  };
+
+  const rawData = {
+    vaoLargura, vaoAltura, profundidade, tamanhoCorre, slideType, quantidadeSapateiras, alturaLateralFixa,
+  };
+
   const downloadContent = useMemo(() => {
     if (!measurements) return "";
-    
     const date = new Date().toLocaleDateString("pt-BR");
     return `CALCULADORA DE SAPATEIRAS - Doriva Móveis
 Data: ${date}
@@ -301,6 +329,18 @@ LATERAL (${measurements.side.quantity} peças):
             </div>
           </div>
 
+          {/* Send to MDF button */}
+          <button
+            onClick={handleSendToMDF}
+            className="group flex items-center justify-center gap-2 w-full py-3 px-6 mt-4
+              bg-gradient-to-r from-accent to-accent/80 hover:from-accent/90 hover:to-accent
+              text-accent-foreground font-semibold rounded-2xl shadow-md
+              hover:shadow-lg transition-all duration-300"
+          >
+            <Grid3X3 className="w-5 h-5 transition-transform group-hover:scale-110" />
+            <span>Enviar para Cortes de MDF</span>
+          </button>
+
           <DownloadImageButton
             filename={`sapateiras-${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}`}
             title="Cálculo de Sapateiras"
@@ -332,7 +372,6 @@ LATERAL (${measurements.side.quantity} peças):
                     <p className="text-amber-400 font-bold text-lg">{measurements.side.width} × {measurements.side.height.toFixed(1)} cm</p>
                   </div>
                 </div>
-                {/* Visual Distribution in download */}
                 <div className="border-t border-white/20 pt-3 mt-2">
                   <p className="text-amber-400 font-semibold mb-2">Distribuição Visual:</p>
                   <div className="space-y-1">
@@ -353,6 +392,8 @@ LATERAL (${measurements.side.quantity} peças):
             measurement={{
               type: "Sapateira",
               label: `${quantidadeSapateiras} sapateira(s) - ${slideType === "oculta" ? "Oculta" : "Telescópica"} ${tamanhoCorre}cm`,
+              calculatorType: "sapateira",
+              rawData,
               inputs: [
                 { label: "Largura do Vão", value: `${vaoLargura} cm` },
                 { label: "Altura Lateral", value: `${alturaLateralFixa} cm` },
