@@ -7,6 +7,8 @@ export interface SavedMeasurement {
   inputs: { label: string; value: string }[];
   results: { label: string; value: string; highlight?: boolean }[];
   timestamp: string;
+  calculatorType?: string;
+  rawData?: Record<string, any>;
 }
 
 const STORAGE_KEY = "doriva-saved-measurements";

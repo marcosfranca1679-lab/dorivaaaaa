@@ -1,7 +1,9 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Ruler, Plus, Trash2, AlertTriangle, CheckCircle, Grid3X3, Scissors } from "lucide-react";
 import DownloadImageButton from "./DownloadImageButton";
 import SaveMeasurementButton from "./SaveMeasurementButton";
+import { useAppActions } from "@/contexts/AppActionsContext";
+import { toast } from "sonner";
 
 interface CutPiece {
   id: string;
@@ -419,6 +421,31 @@ const MDFCutCalculator = () => {
     { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "", qtyStr: "1" },
   ]);
   const [showCutLines, setShowCutLines] = useState(false);
+
+  const { pendingMDFPieces, clearPendingMDFPieces } = useAppActions();
+
+  // Receive pieces from other calculators
+  useEffect(() => {
+    if (pendingMDFPieces && pendingMDFPieces.length > 0) {
+      const newPieces: CutPiece[] = pendingMDFPieces.map(p => ({
+        id: crypto.randomUUID(),
+        width: p.width,
+        height: p.height,
+        quantity: p.quantity,
+        label: p.label,
+        qtyStr: String(p.quantity),
+      }));
+      setPieces(prev => {
+        // If only default empty piece, replace
+        if (prev.length === 1 && prev[0].width === 0 && prev[0].height === 0) {
+          return newPieces;
+        }
+        return [...prev, ...newPieces];
+      });
+      clearPendingMDFPieces();
+      toast.success(`${pendingMDFPieces.length} tipo(s) de peça adicionado(s)!`);
+    }
+  }, [pendingMDFPieces, clearPendingMDFPieces]);
 
   const addPiece = useCallback(() => {
     setPieces((prev) => [

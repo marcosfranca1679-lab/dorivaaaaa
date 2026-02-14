@@ -1,11 +1,14 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Grid3X3 } from "lucide-react";
 import DownloadImageButton from "./DownloadImageButton";
 import SaveMeasurementButton from "./SaveMeasurementButton";
+import { useAppActions } from "@/contexts/AppActionsContext";
+import { toast } from "sonner";
 
 type CoverType = "tampa" | "porta";
 
@@ -16,6 +19,22 @@ const CoverCalculator = () => {
   const [quantity, setQuantity] = useState("");
   const [hasPassingHandle, setHasPassingHandle] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
+
+  const { sendToMDF, pendingEdit, clearPendingEdit } = useAppActions();
+
+  // Load edit data
+  useEffect(() => {
+    if (pendingEdit && pendingEdit.calculatorType === "vaos") {
+      const d = pendingEdit.rawData;
+      if (d.coverType !== undefined) setCoverType(d.coverType);
+      if (d.totalHeight !== undefined) setTotalHeight(String(d.totalHeight));
+      if (d.totalWidth !== undefined) setTotalWidth(String(d.totalWidth));
+      if (d.quantity !== undefined) setQuantity(String(d.quantity));
+      if (d.hasPassingHandle !== undefined) setHasPassingHandle(d.hasPassingHandle);
+      clearPendingEdit();
+      toast.success("Medida carregada para edição!");
+    }
+  }, [pendingEdit, clearPendingEdit]);
 
   const heightValue = parseFloat(totalHeight) || 0;
   const widthValue = parseFloat(totalWidth) || 0;
@@ -491,10 +510,33 @@ const CoverCalculator = () => {
               </div>
             </DownloadImageButton>
 
+            {/* Send to MDF button */}
+            <button
+              onClick={() => {
+                if (!result) return;
+                sendToMDF([{
+                  width: parseFloat(result.width.toFixed(2)),
+                  height: parseFloat(result.height.toFixed(2)),
+                  quantity: quantityValue,
+                  label: coverType === "tampa" ? "Tampa" : "Porta",
+                }]);
+                toast.success("Peças enviadas para Cortes de MDF!");
+              }}
+              className="group flex items-center justify-center gap-2 w-full py-3 px-6
+                bg-gradient-to-r from-accent to-accent/80 hover:from-accent/90 hover:to-accent
+                text-accent-foreground font-semibold rounded-2xl shadow-md
+                hover:shadow-lg transition-all duration-300"
+            >
+              <Grid3X3 className="w-5 h-5 transition-transform group-hover:scale-110" />
+              <span>Enviar para Cortes de MDF</span>
+            </button>
+
             <SaveMeasurementButton
               measurement={{
                 type: coverType === "tampa" ? "Tampa" : "Porta",
                 label: `${quantityValue} ${coverType === "tampa" ? "tampa(s)" : "porta(s)"} - ${heightValue}×${widthValue} cm`,
+                calculatorType: "vaos",
+                rawData: { coverType, totalHeight, totalWidth, quantity, hasPassingHandle },
                 inputs: [
                   { label: "Altura do Vão", value: `${totalHeight} cm` },
                   { label: "Largura do Vão", value: `${totalWidth} cm` },

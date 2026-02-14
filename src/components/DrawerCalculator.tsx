@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
-import { Ruler, Square, Layers, Package, Minus, Plus } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { Ruler, Square, Layers, Package, Minus, Plus, Grid3X3 } from "lucide-react";
 import DownloadImageButton from "./DownloadImageButton";
 import SaveMeasurementButton from "./SaveMeasurementButton";
+import { useAppActions } from "@/contexts/AppActionsContext";
+import { toast } from "sonner";
 
 type SlideType = "oculta" | "telescopica";
 
@@ -24,6 +26,25 @@ const DrawerCalculator = () => {
   const [comPuxadorCanoa, setComPuxadorCanoa] = useState<boolean>(false);
   const [quantidadeGavetas, setQuantidadeGavetas] = useState<number>(1);
 
+  const { sendToMDF, pendingEdit, clearPendingEdit } = useAppActions();
+
+  // Load edit data
+  useEffect(() => {
+    if (pendingEdit && pendingEdit.calculatorType === "gaveta") {
+      const d = pendingEdit.rawData;
+      if (d.vaoLargura !== undefined) setVaoLargura(String(d.vaoLargura));
+      if (d.vaoAltura !== undefined) setVaoAltura(String(d.vaoAltura));
+      if (d.profundidade !== undefined) setProfundidade(String(d.profundidade));
+      if (d.tamanhoCorre !== undefined) setTamanhoCorre(d.tamanhoCorre);
+      if (d.slideType !== undefined) setSlideType(d.slideType);
+      if (d.comRebaixo !== undefined) setComRebaixo(d.comRebaixo);
+      if (d.comPuxadorCanoa !== undefined) setComPuxadorCanoa(d.comPuxadorCanoa);
+      if (d.quantidadeGavetas !== undefined) setQuantidadeGavetas(d.quantidadeGavetas);
+      clearPendingEdit();
+      toast.success("Medida carregada para edição!");
+    }
+  }, [pendingEdit, clearPendingEdit]);
+
   const measurements = useMemo<DrawerMeasurements | null>(() => {
     const largura = parseFloat(vaoLargura);
     const altura = parseFloat(vaoAltura);
@@ -32,7 +53,6 @@ const DrawerCalculator = () => {
       return null;
     }
 
-    // Desconto da largura baseado no tipo de corrediça e rebaixo
     let desconto = 0;
     if (slideType === "oculta") {
       desconto = comRebaixo ? 2.1 : 4;
@@ -40,18 +60,11 @@ const DrawerCalculator = () => {
       desconto = 5.7;
     }
 
-    // Largura da frente/traseira
     const larguraFrenteTraseira = largura - desconto;
-
-    // Altura disponível menos os vãos de 3cm
-    // Cada gaveta tem um vão abaixo dela (gaveta + vão, gaveta + vão, ...)
     const totalVaos = quantidadeGavetas * 3;
     const alturaDisponivel = altura - totalVaos;
-
-    // Altura de cada lateral (gaveta)
     const alturaLateral = alturaDisponivel / quantidadeGavetas;
 
-    // Altura da frente/traseira: com rebaixo -2cm, sem rebaixo -2.5cm (e -2 se puxador canoa)
     let alturaFrenteTraseira = comRebaixo ? alturaLateral - 2 : alturaLateral - 2.5;
     if (comPuxadorCanoa) {
       alturaFrenteTraseira -= 2;
@@ -75,9 +88,22 @@ const DrawerCalculator = () => {
 
   const hasResults = measurements !== null;
 
+  const handleSendToMDF = () => {
+    if (!measurements) return;
+    const pieces = [
+      { width: parseFloat(measurements.frontBack.width.toFixed(1)), height: parseFloat(measurements.frontBack.height.toFixed(1)), quantity: measurements.frontBack.quantity, label: "Frente/Traseira" },
+      { width: measurements.side.width, height: parseFloat(measurements.side.height.toFixed(1)), quantity: measurements.side.quantity, label: "Lateral" },
+    ];
+    sendToMDF(pieces);
+    toast.success("Peças enviadas para Cortes de MDF!");
+  };
+
+  const rawData = {
+    vaoLargura, vaoAltura, profundidade, tamanhoCorre, slideType, comRebaixo, comPuxadorCanoa, quantidadeGavetas,
+  };
+
   const downloadContent = useMemo(() => {
     if (!measurements) return "";
-    
     const date = new Date().toLocaleDateString("pt-BR");
     return `CALCULADORA DE GAVETAS - Doriva Móveis
 Data: ${date}
@@ -356,7 +382,6 @@ LATERAL (${measurements.side.quantity} peças):
             <div className="space-y-1">
               {Array.from({ length: quantidadeGavetas }).map((_, index) => (
                 <div key={index}>
-                  {/* Drawer */}
                   <div 
                     className="bg-gradient-to-r from-primary/30 to-primary/20 rounded-lg border border-primary/30 flex items-center justify-center"
                     style={{ height: `${Math.max(24, measurements.alturaLateral * 1.5)}px` }}
@@ -365,7 +390,6 @@ LATERAL (${measurements.side.quantity} peças):
                       Gaveta {index + 1} - {measurements.alturaLateral.toFixed(1)} cm
                     </span>
                   </div>
-                  {/* Gap after each drawer */}
                   <div className="h-3 bg-border/50 rounded-full flex items-center justify-center mt-1">
                     <span className="text-[10px] text-muted-foreground">Vão {index + 1} - 3 cm</span>
                   </div>
@@ -376,6 +400,18 @@ LATERAL (${measurements.side.quantity} peças):
               {quantidadeGavetas} gaveta{quantidadeGavetas > 1 ? 's' : ''} + {quantidadeGavetas} vão{quantidadeGavetas > 1 ? 's' : ''} = {quantidadeGavetas * 3} cm de vãos
             </p>
           </div>
+
+          {/* Send to MDF button */}
+          <button
+            onClick={handleSendToMDF}
+            className="group flex items-center justify-center gap-2 w-full py-3 px-6 mt-4
+              bg-gradient-to-r from-accent to-accent/80 hover:from-accent/90 hover:to-accent
+              text-accent-foreground font-semibold rounded-2xl shadow-md
+              hover:shadow-lg transition-all duration-300"
+          >
+            <Grid3X3 className="w-5 h-5 transition-transform group-hover:scale-110" />
+            <span>Enviar para Cortes de MDF</span>
+          </button>
 
           <DownloadImageButton
             filename={`gavetas-${new Date().toLocaleDateString("pt-BR").replace(/\//g, "-")}`}
@@ -409,7 +445,6 @@ LATERAL (${measurements.side.quantity} peças):
                   </div>
                 </div>
               </div>
-              {/* Visual Distribution in download */}
               <div className="border-t border-white/20 pt-3 mt-3">
                 <p className="text-amber-400 font-semibold mb-2">Distribuição Visual:</p>
                 <div className="space-y-1">
@@ -434,6 +469,8 @@ LATERAL (${measurements.side.quantity} peças):
             measurement={{
               type: "Gaveta",
               label: `${quantidadeGavetas} gaveta(s) - ${slideType === "oculta" ? "Oculta" : "Telescópica"} ${tamanhoCorre}cm`,
+              calculatorType: "gaveta",
+              rawData,
               inputs: [
                 { label: "Largura do Vão", value: `${vaoLargura} cm` },
                 { label: "Altura do Vão", value: `${vaoAltura} cm` },

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { Calculator, Footprints, LayoutGrid, RectangleHorizontal, Layers, DoorOpen, Grid3X3 } from "lucide-react";
 import DrawerCalculator from "@/components/DrawerCalculator";
 import ShoerackCalculator from "@/components/ShoerackCalculator";
@@ -11,13 +11,13 @@ import NotesDialog from "@/components/NotesDialog";
 import InstallAppButton from "@/components/InstallAppButton";
 import SavedMeasurementsPanel from "@/components/SavedMeasurementsPanel";
 import { SavedMeasurementsProvider } from "@/contexts/SavedMeasurementsContext";
+import { AppActionsProvider, useAppActions, CalculatorType } from "@/contexts/AppActionsContext";
 import logoDoriva from "@/assets/logo-doriva.png";
 import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
 
-type CalculatorType = "gaveta" | "sapateira" | "ripado" | "rodape" | "prateleira" | "vaos" | "mdf";
-
-const Index = () => {
+const IndexContent = () => {
   const [activeCalculator, setActiveCalculator] = useState<CalculatorType>("gaveta");
+  const { registerSwitchFn } = useAppActions();
 
   const switchCalculator = useCallback(
     (next: CalculatorType) => {
@@ -41,8 +41,11 @@ const Index = () => {
     [setActiveCalculator]
   );
 
+  useEffect(() => {
+    registerSwitchFn(switchCalculator);
+  }, [registerSwitchFn, switchCalculator]);
+
   return (
-    <SavedMeasurementsProvider>
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/30 wood-pattern">
       {/* Banner Image with gradient fade */}
       <div className="relative w-full h-32 md:h-48 overflow-hidden">
@@ -183,7 +186,16 @@ const Index = () => {
       <NotesDialog />
       <SavedMeasurementsPanel />
     </div>
-    </SavedMeasurementsProvider>
+  );
+};
+
+const Index = () => {
+  return (
+    <AppActionsProvider>
+      <SavedMeasurementsProvider>
+        <IndexContent />
+      </SavedMeasurementsProvider>
+    </AppActionsProvider>
   );
 };
 
