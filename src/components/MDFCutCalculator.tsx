@@ -235,26 +235,35 @@ const packPieces = (
     },
   ];
 
-  // Split modes to try
-  const splitModes: ("longer" | "shorter" | "area" | "horizontal" | "vertical")[] = [
-    "longer", "shorter", "area", "horizontal", "vertical",
-  ];
+  // Split modes to try based on cut side preference
+  let splitModes: ("longer" | "shorter" | "area" | "horizontal" | "vertical")[];
+  
+  if (cutSidePreference === "shorter") {
+    // Force cuts along the shorter side → horizontal splits dominate
+    splitModes = ["horizontal", "shorter"];
+  } else if (cutSidePreference === "longer") {
+    // Force cuts along the longer side → vertical splits dominate
+    splitModes = ["vertical", "longer"];
+  } else {
+    splitModes = ["longer", "shorter", "area", "horizontal", "vertical"];
+  }
 
   let bestResult: ReturnType<typeof packWithStrategy> | null = null;
   let bestScore = -Infinity;
 
-  // Try all combinations of sort × split × orientation
   // Determine which orientations to try based on preference
   const orientations: Array<"normal" | "swapped"> = [];
   if (cutSidePreference === "auto") {
     orientations.push("normal", "swapped");
   } else if (cutSidePreference === "shorter") {
+    // Pack with shorter side as primary width → pieces align along it
     if (sheetW <= sheetH) {
       orientations.push("normal");
     } else {
       orientations.push("swapped");
     }
   } else {
+    // Pack with longer side as primary width
     if (sheetW >= sheetH) {
       orientations.push("normal");
     } else {
@@ -266,26 +275,16 @@ const packPieces = (
     const sorted = [...expanded].sort(sortFn);
     for (const splitMode of splitModes) {
       for (const orient of orientations) {
-        if (orient === "normal") {
-          const res1 = packWithStrategy(sorted, sheetW, sheetH, splitMode);
-          const score1 = scoreResult(res1, sheetW, sheetH);
-          if (score1 > bestScore) { bestScore = score1; bestResult = res1; }
-        } else if (sheetW !== sheetH) {
-          const res2 = packWithStrategy(sorted, sheetH, sheetW, splitMode);
-          const score2 = scoreResult(res2, sheetH, sheetW);
-          if (score2 > bestScore) {
-            bestScore = score2;
-            bestResult = {
-              placed: res2.placed.map(p => ({
-                ...p,
-                x: p.y,
-                y: p.x,
-                rotated: !p.rotated,
-              })),
-              overflow: res2.overflow,
-              cutLines: res2.cutLines.map(l => ({ x1: l.y1, y1: l.x1, x2: l.y2, y2: l.x2 })),
-            };
-          }
+        const useW = orient === "normal" ? sheetW : sheetH;
+        const useH = orient === "normal" ? sheetH : sheetW;
+        
+        const res = packWithStrategy(sorted, useW, useH, splitMode);
+        const score = scoreResult(res, useW, useH);
+        
+        if (score > bestScore) {
+          bestScore = score;
+          // Store with effective sheet dimensions
+          bestResult = { ...res, effectiveW: useW, effectiveH: useH } as any;
         }
       }
     }
@@ -547,20 +546,24 @@ const MDFCutCalculator = () => {
     return packPieces(validPieces, sw, sh, cutSide);
   }, [validPieces, sw, sh, hasSheet, cutSide]);
 
+  // Get effective sheet dimensions from result (may be swapped)
+  const effectiveSW = result ? ((result as any).effectiveW || sw) : sw;
+  const effectiveSH = result ? ((result as any).effectiveH || sh) : sh;
+
   const stats = useMemo(() => {
     if (!result || !hasSheet) return null;
-    const sheetArea = sw * sh;
+    const sheetArea = effectiveSW * effectiveSH;
     const usedArea = result.placed.reduce((sum, p) => sum + p.piece.width * p.piece.height, 0);
     const wasteArea = sheetArea - usedArea;
     const wastePercent = (wasteArea / sheetArea) * 100;
     const totalPieces = validPieces.reduce((s, p) => s + p.quantity, 0);
     return { sheetArea, usedArea, wasteArea, wastePercent, totalPieces };
-  }, [result, sw, sh, validPieces, hasSheet]);
+  }, [result, effectiveSW, effectiveSH, validPieces, hasSheet]);
 
   const hasResults = result !== null && stats !== null;
 
   const maxVisualWidth = 360;
-  const scale = hasSheet ? Math.min(maxVisualWidth / sw, 500 / sh) : 1;
+  const scale = hasSheet ? Math.min(maxVisualWidth / effectiveSW, 500 / effectiveSH) : 1;
 
   return (
     <div className="space-y-6">
@@ -744,8 +747,8 @@ const MDFCutCalculator = () => {
               <VisualCutMap
                 placed={result.placed}
                 cutLines={result.cutLines}
-                sw={sw}
-                sh={sh}
+                sw={effectiveSW}
+                sh={effectiveSH}
                 scale={scale}
                 pieces={pieces}
                 validPieces={validPieces}
@@ -797,8 +800,8 @@ const MDFCutCalculator = () => {
           >
             <div className="space-y-3">
               <div className="bg-white/10 rounded-lg p-3">
-                <p className="text-white/60 text-xs">Chapa</p>
-                <p className="text-white font-bold">{sw} × {sh} cm</p>
+               <p className="text-white/60 text-xs">Chapa</p>
+                 <p className="text-white font-bold">{effectiveSW} × {effectiveSH} cm</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-white/10 rounded-lg p-3 text-center">
@@ -833,9 +836,9 @@ const MDFCutCalculator = () => {
                   <VisualCutMap
                     placed={result.placed}
                     cutLines={result.cutLines}
-                    sw={sw}
-                    sh={sh}
-                    scale={Math.min(620 / sw, 400 / sh)}
+                    sw={effectiveSW}
+                    sh={effectiveSH}
+                    scale={Math.min(620 / effectiveSW, 400 / effectiveSH)}
                     pieces={pieces}
                     validPieces={validPieces}
                     forDownload
@@ -854,9 +857,9 @@ const MDFCutCalculator = () => {
           <SaveMeasurementButton
             measurement={{
               type: "Corte MDF",
-              label: `${stats.totalPieces} peça(s) em chapa ${sw}×${sh} - Aproveitamento ${(100 - stats.wastePercent).toFixed(1)}%`,
+              label: `${stats.totalPieces} peça(s) em chapa ${effectiveSW}×${effectiveSH} - Aproveitamento ${(100 - stats.wastePercent).toFixed(1)}%`,
               inputs: [
-                { label: "Chapa", value: `${sw} × ${sh} cm` },
+                { label: "Chapa", value: `${effectiveSW} × ${effectiveSH} cm` },
                 ...validPieces.map((p, i) => ({
                   label: p.label || `Peça ${i + 1}`,
                   value: `${p.width} × ${p.height} cm × ${p.quantity}`,
