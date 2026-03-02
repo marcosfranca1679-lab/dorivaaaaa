@@ -747,8 +747,8 @@ const MDFCutCalculator = () => {
               <VisualCutMap
                 placed={result.placed}
                 cutLines={result.cutLines}
-                sw={sw}
-                sh={sh}
+                sw={effectiveSW}
+                sh={effectiveSH}
                 scale={scale}
                 pieces={pieces}
                 validPieces={validPieces}
@@ -800,8 +800,8 @@ const MDFCutCalculator = () => {
           >
             <div className="space-y-3">
               <div className="bg-white/10 rounded-lg p-3">
-                <p className="text-white/60 text-xs">Chapa</p>
-                <p className="text-white font-bold">{sw} × {sh} cm</p>
+               <p className="text-white/60 text-xs">Chapa</p>
+                 <p className="text-white font-bold">{effectiveSW} × {effectiveSH} cm</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-white/10 rounded-lg p-3 text-center">
@@ -836,9 +836,9 @@ const MDFCutCalculator = () => {
                   <VisualCutMap
                     placed={result.placed}
                     cutLines={result.cutLines}
-                    sw={sw}
-                    sh={sh}
-                    scale={Math.min(620 / sw, 400 / sh)}
+                    sw={effectiveSW}
+                    sh={effectiveSH}
+                    scale={Math.min(620 / effectiveSW, 400 / effectiveSH)}
                     pieces={pieces}
                     validPieces={validPieces}
                     forDownload
