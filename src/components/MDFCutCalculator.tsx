@@ -552,18 +552,18 @@ const MDFCutCalculator = () => {
 
   const stats = useMemo(() => {
     if (!result || !hasSheet) return null;
-    const sheetArea = sw * sh;
+    const sheetArea = effectiveSW * effectiveSH;
     const usedArea = result.placed.reduce((sum, p) => sum + p.piece.width * p.piece.height, 0);
     const wasteArea = sheetArea - usedArea;
     const wastePercent = (wasteArea / sheetArea) * 100;
     const totalPieces = validPieces.reduce((s, p) => s + p.quantity, 0);
     return { sheetArea, usedArea, wasteArea, wastePercent, totalPieces };
-  }, [result, sw, sh, validPieces, hasSheet]);
+  }, [result, effectiveSW, effectiveSH, validPieces, hasSheet]);
 
   const hasResults = result !== null && stats !== null;
 
   const maxVisualWidth = 360;
-  const scale = hasSheet ? Math.min(maxVisualWidth / sw, 500 / sh) : 1;
+  const scale = hasSheet ? Math.min(maxVisualWidth / effectiveSW, 500 / effectiveSH) : 1;
 
   return (
     <div className="space-y-6">
