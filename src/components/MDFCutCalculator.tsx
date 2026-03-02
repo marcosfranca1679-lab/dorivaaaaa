@@ -546,6 +546,10 @@ const MDFCutCalculator = () => {
     return packPieces(validPieces, sw, sh, cutSide);
   }, [validPieces, sw, sh, hasSheet, cutSide]);
 
+  // Get effective sheet dimensions from result (may be swapped)
+  const effectiveSW = result ? ((result as any).effectiveW || sw) : sw;
+  const effectiveSH = result ? ((result as any).effectiveH || sh) : sh;
+
   const stats = useMemo(() => {
     if (!result || !hasSheet) return null;
     const sheetArea = sw * sh;
