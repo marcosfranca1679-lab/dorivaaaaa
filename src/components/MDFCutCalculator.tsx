@@ -163,6 +163,47 @@ const packWithStrategy = (
   return { placed, overflow, cutLines };
 };
 
+// Score a packing result: prioritize fitting all pieces, then minimize bounding box (maximize reusable offcut)
+const scoreResult = (
+  res: ReturnType<typeof packWithStrategy>,
+  sheetW: number,
+  sheetH: number
+): number => {
+  const totalArea = res.placed.reduce((s, p) => s + p.piece.width * p.piece.height, 0);
+  
+  if (res.placed.length === 0) return -Infinity;
+  
+  // Primary: maximize number of placed pieces
+  let score = res.placed.length * 10000000;
+  
+  // Secondary: when all pieces fit, prefer layouts that minimize the bounding box
+  // This leaves larger contiguous offcuts (reusable strips)
+  if (res.overflow.length === 0) {
+    let maxX = 0, maxY = 0;
+    for (const p of res.placed) {
+      const pw = p.rotated ? p.piece.height : p.piece.width;
+      const ph = p.rotated ? p.piece.width : p.piece.height;
+      maxX = Math.max(maxX, p.x + pw);
+      maxY = Math.max(maxY, p.y + ph);
+    }
+    // Prefer layouts where pieces are concentrated in one corner
+    // Use the smaller bounding dimension ratio to reward tight packing along one axis
+    const boundingArea = maxX * maxY;
+    const compactness = 1 - (boundingArea / (sheetW * sheetH));
+    score += compactness * 5000000;
+    // Also reward when one dimension is fully used (makes a clean strip cut)
+    const xRatio = maxX / sheetW;
+    const yRatio = maxY / sheetH;
+    const minRatio = Math.min(xRatio, yRatio);
+    score += (1 - minRatio) * 2000000; // reward freeing up a large strip
+  }
+  
+  // Tertiary: total used area
+  score += totalArea;
+  
+  return score;
+};
+
 const packPieces = (
   pieces: CutPiece[],
   sheetW: number,
@@ -177,11 +218,18 @@ const packPieces = (
 
   // Sorting strategies
   const sortStrategies: ((a: { piece: CutPiece }, b: { piece: CutPiece }) => number)[] = [
-    (a, b) => b.piece.width * b.piece.height - a.piece.width * a.piece.height, // Area
+    (a, b) => b.piece.width * b.piece.height - a.piece.width * a.piece.height, // Area desc
     (a, b) => Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height), // Max side
-    (a, b) => b.piece.height - a.piece.height || b.piece.width - a.piece.width, // Height
-    (a, b) => b.piece.width - a.piece.width || b.piece.height - a.piece.height, // Width
+    (a, b) => b.piece.height - a.piece.height || b.piece.width - a.piece.width, // Height desc
+    (a, b) => b.piece.width - a.piece.width || b.piece.height - a.piece.height, // Width desc
     (a, b) => (b.piece.width + b.piece.height) - (a.piece.width + a.piece.height), // Perimeter
+    (a, b) => Math.min(b.piece.width, b.piece.height) - Math.min(a.piece.width, a.piece.height), // Min side desc
+    (a, b) => {
+      // Sort by how well pieces fit the shorter sheet dimension
+      const aFit = Math.min(Math.abs(a.piece.width - sheetH), Math.abs(a.piece.height - sheetH), Math.abs(a.piece.width - sheetW), Math.abs(a.piece.height - sheetW));
+      const bFit = Math.min(Math.abs(b.piece.width - sheetH), Math.abs(b.piece.height - sheetH), Math.abs(b.piece.width - sheetW), Math.abs(b.piece.height - sheetW));
+      return aFit - bFit; // pieces that match sheet dimensions first
+    },
   ];
 
   // Split modes to try
@@ -190,7 +238,7 @@ const packPieces = (
   ];
 
   let bestResult: ReturnType<typeof packWithStrategy> | null = null;
-  let bestScore = -1;
+  let bestScore = -Infinity;
 
   // Try all combinations of sort × split × orientation
   for (const sortFn of sortStrategies) {
@@ -198,16 +246,15 @@ const packPieces = (
     for (const splitMode of splitModes) {
       // Try normal orientation
       const res1 = packWithStrategy(sorted, sheetW, sheetH, splitMode);
-      const score1 = res1.placed.length * 1000000 + res1.placed.reduce((s, p) => s + p.piece.width * p.piece.height, 0);
+      const score1 = scoreResult(res1, sheetW, sheetH);
       if (score1 > bestScore) { bestScore = score1; bestResult = res1; }
 
       // Try swapped sheet orientation (then remap coords back)
       if (sheetW !== sheetH) {
         const res2 = packWithStrategy(sorted, sheetH, sheetW, splitMode);
-        const score2 = res2.placed.length * 1000000 + res2.placed.reduce((s, p) => s + p.piece.width * p.piece.height, 0);
+        const score2 = scoreResult(res2, sheetH, sheetW);
         if (score2 > bestScore) {
           bestScore = score2;
-          // Remap: swap x↔y coordinates and rotations so it fits original sheet
           bestResult = {
             placed: res2.placed.map(p => ({
               ...p,
