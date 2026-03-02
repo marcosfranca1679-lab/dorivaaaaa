@@ -857,9 +857,9 @@ const MDFCutCalculator = () => {
           <SaveMeasurementButton
             measurement={{
               type: "Corte MDF",
-              label: `${stats.totalPieces} peça(s) em chapa ${sw}×${sh} - Aproveitamento ${(100 - stats.wastePercent).toFixed(1)}%`,
+              label: `${stats.totalPieces} peça(s) em chapa ${effectiveSW}×${effectiveSH} - Aproveitamento ${(100 - stats.wastePercent).toFixed(1)}%`,
               inputs: [
-                { label: "Chapa", value: `${sw} × ${sh} cm` },
+                { label: "Chapa", value: `${effectiveSW} × ${effectiveSH} cm` },
                 ...validPieces.map((p, i) => ({
                   label: p.label || `Peça ${i + 1}`,
                   value: `${p.width} × ${p.height} cm × ${p.quantity}`,
