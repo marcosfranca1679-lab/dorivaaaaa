@@ -204,10 +204,13 @@ const scoreResult = (
   return score;
 };
 
+type CutSidePreference = "auto" | "shorter" | "longer";
+
 const packPieces = (
   pieces: CutPiece[],
   sheetW: number,
-  sheetH: number
+  sheetH: number,
+  cutSidePreference: CutSidePreference = "auto"
 ): { placed: PlacedPiece[]; overflow: PlacedPiece[]; cutLines: CutLine[] } => {
   const expanded: { piece: CutPiece; index: number }[] = [];
   pieces.forEach((p) => {
