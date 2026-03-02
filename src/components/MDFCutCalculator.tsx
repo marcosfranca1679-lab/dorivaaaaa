@@ -244,30 +244,48 @@ const packPieces = (
   let bestScore = -Infinity;
 
   // Try all combinations of sort × split × orientation
+  // Determine which orientations to try based on preference
+  const orientations: Array<"normal" | "swapped"> = [];
+  if (cutSidePreference === "auto") {
+    orientations.push("normal", "swapped");
+  } else if (cutSidePreference === "shorter") {
+    if (sheetW <= sheetH) {
+      orientations.push("normal");
+    } else {
+      orientations.push("swapped");
+    }
+  } else {
+    if (sheetW >= sheetH) {
+      orientations.push("normal");
+    } else {
+      orientations.push("swapped");
+    }
+  }
+
   for (const sortFn of sortStrategies) {
     const sorted = [...expanded].sort(sortFn);
     for (const splitMode of splitModes) {
-      // Try normal orientation
-      const res1 = packWithStrategy(sorted, sheetW, sheetH, splitMode);
-      const score1 = scoreResult(res1, sheetW, sheetH);
-      if (score1 > bestScore) { bestScore = score1; bestResult = res1; }
-
-      // Try swapped sheet orientation (then remap coords back)
-      if (sheetW !== sheetH) {
-        const res2 = packWithStrategy(sorted, sheetH, sheetW, splitMode);
-        const score2 = scoreResult(res2, sheetH, sheetW);
-        if (score2 > bestScore) {
-          bestScore = score2;
-          bestResult = {
-            placed: res2.placed.map(p => ({
-              ...p,
-              x: p.y,
-              y: p.x,
-              rotated: !p.rotated,
-            })),
-            overflow: res2.overflow,
-            cutLines: res2.cutLines.map(l => ({ x1: l.y1, y1: l.x1, x2: l.y2, y2: l.x2 })),
-          };
+      for (const orient of orientations) {
+        if (orient === "normal") {
+          const res1 = packWithStrategy(sorted, sheetW, sheetH, splitMode);
+          const score1 = scoreResult(res1, sheetW, sheetH);
+          if (score1 > bestScore) { bestScore = score1; bestResult = res1; }
+        } else if (sheetW !== sheetH) {
+          const res2 = packWithStrategy(sorted, sheetH, sheetW, splitMode);
+          const score2 = scoreResult(res2, sheetH, sheetW);
+          if (score2 > bestScore) {
+            bestScore = score2;
+            bestResult = {
+              placed: res2.placed.map(p => ({
+                ...p,
+                x: p.y,
+                y: p.x,
+                rotated: !p.rotated,
+              })),
+              overflow: res2.overflow,
+              cutLines: res2.cutLines.map(l => ({ x1: l.y1, y1: l.x1, x2: l.y2, y2: l.x2 })),
+            };
+          }
         }
       }
     }
@@ -471,6 +489,7 @@ const MDFCutCalculator = () => {
     { id: crypto.randomUUID(), width: 0, height: 0, quantity: 1, label: "", qtyStr: "1" },
   ]);
   const [showCutLines, setShowCutLines] = useState(false);
+  const [cutSide, setCutSide] = useState<CutSidePreference>("auto");
 
   const { pendingMDFPieces, clearPendingMDFPieces } = useAppActions();
 
@@ -525,8 +544,8 @@ const MDFCutCalculator = () => {
 
   const result = useMemo(() => {
     if (!hasSheet || validPieces.length === 0) return null;
-    return packPieces(validPieces, sw, sh);
-  }, [validPieces, sw, sh, hasSheet]);
+    return packPieces(validPieces, sw, sh, cutSide);
+  }, [validPieces, sw, sh, hasSheet, cutSide]);
 
   const stats = useMemo(() => {
     if (!result || !hasSheet) return null;
@@ -561,7 +580,32 @@ const MDFCutCalculator = () => {
             <input type="number" value={sheetHeight} onChange={(e) => setSheetHeight(e.target.value)} placeholder="185" className="input-wood w-full" />
           </div>
         </div>
-        <p className="text-xs text-muted-foreground text-center">Padrão: 275 × 185 cm</p>
+        <p className="text-xs text-muted-foreground text-center mb-3">Padrão: 275 × 185 cm</p>
+        
+        {/* Cut side preference */}
+        <div>
+          <label className="block text-sm font-medium text-muted-foreground mb-2">Lado de corte preferencial</label>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { value: "auto" as CutSidePreference, label: "Automático", desc: "Melhor aproveitamento" },
+              { value: "shorter" as CutSidePreference, label: `Lado ${Math.min(sw || 185, sh || 275)} cm`, desc: "Lado menor" },
+              { value: "longer" as CutSidePreference, label: `Lado ${Math.max(sw || 275, sh || 185)} cm`, desc: "Lado maior" },
+            ]).map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setCutSide(opt.value)}
+                className={`p-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                  cutSide === opt.value
+                    ? "bg-primary/15 text-primary border-primary/40"
+                    : "bg-secondary/30 text-muted-foreground border-border/30 hover:bg-secondary/50"
+                }`}
+              >
+                <div>{opt.label}</div>
+                <div className="text-[10px] font-normal opacity-70 mt-0.5">{opt.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Pieces list */}
