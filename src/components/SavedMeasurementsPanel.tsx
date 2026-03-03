@@ -39,7 +39,7 @@ const SavedMeasurementsPanel = () => {
   const [bannerBase64, setBannerBase64] = useState("");
 
   useEffect(() => {
-    Promise.all([imageToBase64(logoDoriva), bannerToBase64(bannerMarceneiro)])
+    Promise.all([imageToBase64(logoDoriva), imageToBase64(bannerMarceneiro)])
       .then(([logo, banner]) => { setLogoBase64(logo); setBannerBase64(banner); })
       .catch(() => {});
   }, []);
