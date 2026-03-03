@@ -10,7 +10,6 @@ import bannerMarceneiro from "@/assets/banner-marceneiro.jpg";
 const imageToBase64 = (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    // Do NOT set crossOrigin for local assets - causes tainted canvas
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
@@ -19,28 +18,9 @@ const imageToBase64 = (url: string): Promise<string> => {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0);
-          // Use image/png for logo (preserves transparency, no black background)
-          resolve(canvas.toDataURL('image/png'));
-        } else reject(new Error('No ctx'));
-      } catch (err) { reject(err); }
-    };
-    img.onerror = () => reject(new Error('Failed'));
-    img.src = url;
-  });
-};
-
-const bannerToBase64 = (url: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
+          // Use PNG for images with transparency (logos), JPEG for photos
+          const isPng = url.toLowerCase().endsWith('.png');
+          resolve(canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', 0.9));
         } else reject(new Error('No ctx'));
       } catch (err) { reject(err); }
     };
