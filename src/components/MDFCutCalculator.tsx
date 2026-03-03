@@ -42,7 +42,8 @@ const packWithStrategy = (
   expanded: { piece: CutPiece; index: number }[],
   sheetW: number,
   sheetH: number,
-  splitMode: "longer" | "shorter" | "area" | "horizontal" | "vertical" = "longer"
+  splitMode: "longer" | "shorter" | "area" | "horizontal" | "vertical" = "longer",
+  pieceOrientationBias: "none" | "align-width" | "align-height" = "none"
 ): { placed: PlacedPiece[]; overflow: PlacedPiece[]; cutLines: CutLine[] } => {
   const freeRects: FreeRect[] = [{ x: 0, y: 0, w: sheetW, h: sheetH }];
   const placed: PlacedPiece[] = [];
@@ -51,7 +52,6 @@ const packWithStrategy = (
 
   const tryFit = (pw: number, ph: number, rect: FreeRect): number => {
     if (pw > rect.w || ph > rect.h) return Infinity;
-    // Best Short Side Fit: minimize the shortest leftover side
     return Math.min(rect.w - pw, rect.h - ph);
   };
 
@@ -65,16 +65,41 @@ const packWithStrategy = (
 
       // Normal orientation
       const scoreN = tryFit(piece.width, piece.height, rect);
-      if (scoreN < bestScore) {
-        bestScore = scoreN;
+      // Rotated 90°
+      const scoreR = tryFit(piece.height, piece.width, rect);
+
+      // Apply orientation bias: prefer piece rotation that aligns the longer piece dimension
+      // with the preferred sheet axis
+      let biasN = 0;
+      let biasR = 0;
+      if (pieceOrientationBias === "align-width") {
+        // Prefer piece's longer side along width (horizontal)
+        // Normal: piece.width along sheet width. Rotated: piece.height along sheet width
+        if (piece.width >= piece.height) {
+          biasR += 50; // penalize rotation that puts shorter side along width
+        } else {
+          biasN += 50; // penalize normal that puts shorter side along width
+        }
+      } else if (pieceOrientationBias === "align-height") {
+        // Prefer piece's longer side along height (vertical)
+        if (piece.height >= piece.width) {
+          biasR += 50;
+        } else {
+          biasN += 50;
+        }
+      }
+
+      const adjustedN = scoreN + biasN;
+      const adjustedR = scoreR + biasR;
+
+      if (adjustedN < bestScore && scoreN !== Infinity) {
+        bestScore = adjustedN;
         bestRectIdx = ri;
         bestRotated = false;
       }
 
-      // Rotated 90°
-      const scoreR = tryFit(piece.height, piece.width, rect);
-      if (scoreR < bestScore) {
-        bestScore = scoreR;
+      if (adjustedR < bestScore && scoreR !== Infinity) {
+        bestScore = adjustedR;
         bestRectIdx = ri;
         bestRotated = true;
       }
@@ -96,16 +121,14 @@ const packWithStrategy = (
 
     freeRects.splice(bestRectIdx, 1);
 
-    // Decide split direction based on mode — always straight cuts
     let splitHorizontally: boolean;
     if (rightW <= 0 && bottomH <= 0) {
-      continue; // Perfect fit
+      continue;
     } else if (rightW <= 0) {
       splitHorizontally = true;
     } else if (bottomH <= 0) {
       splitHorizontally = false;
     } else {
-      // Choose split to maximize the larger remaining rectangle
       switch (splitMode) {
         case "horizontal":
           splitHorizontally = true;
@@ -114,11 +137,9 @@ const packWithStrategy = (
           splitHorizontally = false;
           break;
         case "shorter":
-          // Split along shorter remainder → keeps bigger piece intact
           splitHorizontally = bottomH <= rightW;
           break;
         case "area": {
-          // Split to maximize the area of the larger remaining piece
           const hArea = Math.max(rect.w * bottomH, rightW * ph);
           const vArea = Math.max(pw * bottomH, rightW * rect.h);
           splitHorizontally = hArea >= vArea;
@@ -126,17 +147,14 @@ const packWithStrategy = (
         }
         case "longer":
         default:
-          // Split along the longer side of the free rect → keeps long strips
           splitHorizontally = rect.w >= rect.h;
           break;
       }
     }
 
     if (splitHorizontally) {
-      // Horizontal cut across full width at y + ph
       cutLines.push({ x1: rect.x, y1: rect.y + ph, x2: rect.x + rect.w, y2: rect.y + ph });
       if (rightW > 0) {
-        // Vertical cut in the top strip
         cutLines.push({ x1: rect.x + pw, y1: rect.y, x2: rect.x + pw, y2: rect.y + ph });
         freeRects.push({ x: rect.x + pw, y: rect.y, w: rightW, h: ph });
       }
@@ -144,10 +162,8 @@ const packWithStrategy = (
         freeRects.push({ x: rect.x, y: rect.y + ph, w: rect.w, h: bottomH });
       }
     } else {
-      // Vertical cut across full height at x + pw
       cutLines.push({ x1: rect.x + pw, y1: rect.y, x2: rect.x + pw, y2: rect.y + rect.h });
       if (bottomH > 0) {
-        // Horizontal cut in the left strip
         cutLines.push({ x1: rect.x, y1: rect.y + ph, x2: rect.x + pw, y2: rect.y + ph });
         freeRects.push({ x: rect.x, y: rect.y + ph, w: pw, h: bottomH });
       }
@@ -156,7 +172,6 @@ const packWithStrategy = (
       }
     }
 
-    // Sort free rects: prefer smaller areas for tighter packing
     freeRects.sort((a, b) => a.w * a.h - b.w * b.h);
   }
 
