@@ -740,8 +740,8 @@ const MDFCutCalculator = () => {
               <VisualCutMap
                 placed={result.placed}
                 cutLines={result.cutLines}
-                sw={effectiveSW}
-                sh={effectiveSH}
+                sw={sw}
+                sh={sh}
                 scale={scale}
                 pieces={pieces}
                 validPieces={validPieces}
@@ -794,7 +794,7 @@ const MDFCutCalculator = () => {
             <div className="space-y-3">
               <div className="bg-white/10 rounded-lg p-3">
                <p className="text-white/60 text-xs">Chapa</p>
-                 <p className="text-white font-bold">{effectiveSW} × {effectiveSH} cm</p>
+                 <p className="text-white font-bold">{sw} × {sh} cm</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div className="bg-white/10 rounded-lg p-3 text-center">
@@ -829,9 +829,9 @@ const MDFCutCalculator = () => {
                   <VisualCutMap
                     placed={result.placed}
                     cutLines={result.cutLines}
-                    sw={effectiveSW}
-                    sh={effectiveSH}
-                    scale={Math.min(620 / effectiveSW, 400 / effectiveSH)}
+                    sw={sw}
+                    sh={sh}
+                    scale={Math.min(620 / sw, 400 / sh)}
                     pieces={pieces}
                     validPieces={validPieces}
                     forDownload
@@ -850,9 +850,9 @@ const MDFCutCalculator = () => {
           <SaveMeasurementButton
             measurement={{
               type: "Corte MDF",
-              label: `${stats.totalPieces} peça(s) em chapa ${effectiveSW}×${effectiveSH} - Aproveitamento ${(100 - stats.wastePercent).toFixed(1)}%`,
+              label: `${stats.totalPieces} peça(s) em chapa ${sw}×${sh} - Aproveitamento ${(100 - stats.wastePercent).toFixed(1)}%`,
               inputs: [
-                { label: "Chapa", value: `${effectiveSW} × ${effectiveSH} cm` },
+                { label: "Chapa", value: `${sw} × ${sh} cm` },
                 ...validPieces.map((p, i) => ({
                   label: p.label || `Peça ${i + 1}`,
                   value: `${p.width} × ${p.height} cm × ${p.quantity}`,
