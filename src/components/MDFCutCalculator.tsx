@@ -259,15 +259,13 @@ const packPieces = (
   let orientationBias: "none" | "align-width" | "align-height" = "none";
   
   if (cutSidePreference === "shorter") {
-    // Stack pieces along the shorter side
-    // If width is shorter → pieces align along width → vertical cuts
-    // If height is shorter → pieces align along height → horizontal cuts
-    splitModes = isWidthShorter ? ["vertical", "shorter"] : ["horizontal", "shorter"];
-    orientationBias = isWidthShorter ? "align-width" : "align-height";
-  } else if (cutSidePreference === "longer") {
-    // Stack pieces along the longer side
-    splitModes = isWidthShorter ? ["horizontal", "longer"] : ["vertical", "longer"];
+    // Cortes no lado menor: se largura é menor → horizontal, se altura é menor → vertical
+    splitModes = isWidthShorter ? ["horizontal", "shorter"] : ["vertical", "shorter"];
     orientationBias = isWidthShorter ? "align-height" : "align-width";
+  } else if (cutSidePreference === "longer") {
+    // Cortes no lado maior: se largura é maior → horizontal ao longo dela, senão vertical
+    splitModes = isWidthShorter ? ["vertical", "longer"] : ["horizontal", "longer"];
+    orientationBias = isWidthShorter ? "align-width" : "align-height";
   } else {
     splitModes = ["longer", "shorter", "area", "horizontal", "vertical"];
   }

@@ -37,7 +37,9 @@ const imageToBase64 = (url: string): Promise<string> => {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0);
-          resolve(canvas.toDataURL('image/jpeg', 0.9));
+          // Use PNG for images with transparency (logos), JPEG for photos
+          const isPng = url.toLowerCase().endsWith('.png');
+          resolve(canvas.toDataURL(isPng ? 'image/png' : 'image/jpeg', 0.9));
         } else {
           reject(new Error('Failed to get canvas context'));
         }
