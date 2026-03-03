@@ -221,29 +221,34 @@ const packPieces = (
 
   // Sorting strategies
   const sortStrategies: ((a: { piece: CutPiece }, b: { piece: CutPiece }) => number)[] = [
-    (a, b) => b.piece.width * b.piece.height - a.piece.width * a.piece.height, // Area desc
-    (a, b) => Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height), // Max side
-    (a, b) => b.piece.height - a.piece.height || b.piece.width - a.piece.width, // Height desc
-    (a, b) => b.piece.width - a.piece.width || b.piece.height - a.piece.height, // Width desc
-    (a, b) => (b.piece.width + b.piece.height) - (a.piece.width + a.piece.height), // Perimeter
-    (a, b) => Math.min(b.piece.width, b.piece.height) - Math.min(a.piece.width, a.piece.height), // Min side desc
+    (a, b) => b.piece.width * b.piece.height - a.piece.width * a.piece.height,
+    (a, b) => Math.max(b.piece.width, b.piece.height) - Math.max(a.piece.width, a.piece.height),
+    (a, b) => b.piece.height - a.piece.height || b.piece.width - a.piece.width,
+    (a, b) => b.piece.width - a.piece.width || b.piece.height - a.piece.height,
+    (a, b) => (b.piece.width + b.piece.height) - (a.piece.width + a.piece.height),
+    (a, b) => Math.min(b.piece.width, b.piece.height) - Math.min(a.piece.width, a.piece.height),
     (a, b) => {
-      // Sort by how well pieces fit the shorter sheet dimension
       const aFit = Math.min(Math.abs(a.piece.width - sheetH), Math.abs(a.piece.height - sheetH), Math.abs(a.piece.width - sheetW), Math.abs(a.piece.height - sheetW));
       const bFit = Math.min(Math.abs(b.piece.width - sheetH), Math.abs(b.piece.height - sheetH), Math.abs(b.piece.width - sheetW), Math.abs(b.piece.height - sheetW));
-      return aFit - bFit; // pieces that match sheet dimensions first
+      return aFit - bFit;
     },
   ];
 
-  // Split modes to try based on cut side preference
+  // Determine shorter and longer sides of the actual sheet
+  const shorterSide = Math.min(sheetW, sheetH);
+  const longerSide = Math.max(sheetW, sheetH);
+  const isWidthShorter = sheetW <= sheetH;
+
+  // Split modes based on preference — controls cut direction on the ACTUAL sheet
   let splitModes: ("longer" | "shorter" | "area" | "horizontal" | "vertical")[];
   
   if (cutSidePreference === "shorter") {
-    // Force cuts along the shorter side → horizontal splits dominate
-    splitModes = ["horizontal", "shorter"];
+    // We want pieces stacked along the shorter side of the sheet
+    // If width is shorter: stack pieces horizontally (vertical cuts along width)
+    // If height is shorter: stack pieces vertically (horizontal cuts along height)
+    splitModes = isWidthShorter ? ["vertical", "shorter"] : ["horizontal", "shorter"];
   } else if (cutSidePreference === "longer") {
-    // Force cuts along the longer side → vertical splits dominate
-    splitModes = ["vertical", "longer"];
+    splitModes = isWidthShorter ? ["horizontal", "longer"] : ["vertical", "longer"];
   } else {
     splitModes = ["longer", "shorter", "area", "horizontal", "vertical"];
   }
@@ -251,40 +256,32 @@ const packPieces = (
   let bestResult: ReturnType<typeof packWithStrategy> | null = null;
   let bestScore = -Infinity;
 
-  // Determine which orientations to try based on preference
-  const orientations: Array<"normal" | "swapped"> = [];
-  if (cutSidePreference === "auto") {
-    orientations.push("normal", "swapped");
-  } else if (cutSidePreference === "shorter") {
-    // Pack with shorter side as primary width → pieces align along it
-    if (sheetW <= sheetH) {
-      orientations.push("normal");
-    } else {
-      orientations.push("swapped");
-    }
-  } else {
-    // Pack with longer side as primary width
-    if (sheetW >= sheetH) {
-      orientations.push("normal");
-    } else {
-      orientations.push("swapped");
-    }
-  }
-
+  // NEVER swap sheet dimensions — always use original orientation
+  // Instead, control piece rotation preference based on cut side
   for (const sortFn of sortStrategies) {
     const sorted = [...expanded].sort(sortFn);
-    for (const splitMode of splitModes) {
-      for (const orient of orientations) {
-        const useW = orient === "normal" ? sheetW : sheetH;
-        const useH = orient === "normal" ? sheetH : sheetW;
-        
-        const res = packWithStrategy(sorted, useW, useH, splitMode);
-        const score = scoreResult(res, useW, useH);
+    
+    // For non-auto modes, also try sorting pieces to prefer alignment with the target side
+    const sortVariants = [sorted];
+    if (cutSidePreference !== "auto") {
+      const targetDim = cutSidePreference === "shorter" ? shorterSide : longerSide;
+      // Sort pieces preferring those whose dimension matches the target side
+      const alignSorted = [...expanded].sort((a, b) => {
+        const aMatch = Math.min(Math.abs(a.piece.width - targetDim), Math.abs(a.piece.height - targetDim));
+        const bMatch = Math.min(Math.abs(b.piece.width - targetDim), Math.abs(b.piece.height - targetDim));
+        return aMatch - bMatch;
+      });
+      sortVariants.push(alignSorted);
+    }
+    
+    for (const sortedPieces of sortVariants) {
+      for (const splitMode of splitModes) {
+        const res = packWithStrategy(sortedPieces, sheetW, sheetH, splitMode);
+        const score = scoreResult(res, sheetW, sheetH);
         
         if (score > bestScore) {
           bestScore = score;
-          // Store with effective sheet dimensions
-          bestResult = { ...res, effectiveW: useW, effectiveH: useH } as any;
+          bestResult = res;
         }
       }
     }
