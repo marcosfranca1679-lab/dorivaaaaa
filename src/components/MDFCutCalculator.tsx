@@ -254,16 +254,20 @@ const packPieces = (
   const longerSide = Math.max(sheetW, sheetH);
   const isWidthShorter = sheetW <= sheetH;
 
-  // Split modes based on preference — controls cut direction on the ACTUAL sheet
+  // Split modes and piece orientation bias based on preference
   let splitModes: ("longer" | "shorter" | "area" | "horizontal" | "vertical")[];
+  let orientationBias: "none" | "align-width" | "align-height" = "none";
   
   if (cutSidePreference === "shorter") {
-    // We want pieces stacked along the shorter side of the sheet
-    // If width is shorter: stack pieces horizontally (vertical cuts along width)
-    // If height is shorter: stack pieces vertically (horizontal cuts along height)
+    // Stack pieces along the shorter side
+    // If width is shorter → pieces align along width → vertical cuts
+    // If height is shorter → pieces align along height → horizontal cuts
     splitModes = isWidthShorter ? ["vertical", "shorter"] : ["horizontal", "shorter"];
+    orientationBias = isWidthShorter ? "align-width" : "align-height";
   } else if (cutSidePreference === "longer") {
+    // Stack pieces along the longer side
     splitModes = isWidthShorter ? ["horizontal", "longer"] : ["vertical", "longer"];
+    orientationBias = isWidthShorter ? "align-height" : "align-width";
   } else {
     splitModes = ["longer", "shorter", "area", "horizontal", "vertical"];
   }
@@ -271,16 +275,16 @@ const packPieces = (
   let bestResult: ReturnType<typeof packWithStrategy> | null = null;
   let bestScore = -Infinity;
 
-  // NEVER swap sheet dimensions — always use original orientation
-  // Instead, control piece rotation preference based on cut side
+  // Try multiple sort + split combinations, also try with and without bias
+  const biases: ("none" | "align-width" | "align-height")[] = 
+    cutSidePreference === "auto" ? ["none"] : [orientationBias, "none"];
+
   for (const sortFn of sortStrategies) {
     const sorted = [...expanded].sort(sortFn);
     
-    // For non-auto modes, also try sorting pieces to prefer alignment with the target side
     const sortVariants = [sorted];
     if (cutSidePreference !== "auto") {
       const targetDim = cutSidePreference === "shorter" ? shorterSide : longerSide;
-      // Sort pieces preferring those whose dimension matches the target side
       const alignSorted = [...expanded].sort((a, b) => {
         const aMatch = Math.min(Math.abs(a.piece.width - targetDim), Math.abs(a.piece.height - targetDim));
         const bMatch = Math.min(Math.abs(b.piece.width - targetDim), Math.abs(b.piece.height - targetDim));
@@ -291,12 +295,14 @@ const packPieces = (
     
     for (const sortedPieces of sortVariants) {
       for (const splitMode of splitModes) {
-        const res = packWithStrategy(sortedPieces, sheetW, sheetH, splitMode);
-        const score = scoreResult(res, sheetW, sheetH);
-        
-        if (score > bestScore) {
-          bestScore = score;
-          bestResult = res;
+        for (const bias of biases) {
+          const res = packWithStrategy(sortedPieces, sheetW, sheetH, splitMode, bias);
+          const score = scoreResult(res, sheetW, sheetH);
+          
+          if (score > bestScore) {
+            bestScore = score;
+            bestResult = res;
+          }
         }
       }
     }
